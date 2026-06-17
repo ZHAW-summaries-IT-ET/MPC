@@ -1,0 +1,45 @@
+\section{L5 -- Operating Systems}
+
+\begin{KR}{Recipe: Apply Amdahl's Law}\\
+    Find $p$ (parallel fraction) $\to$ $S(N)=\tfrac{1}{(1-p)+p/N}$ $\to$ ceiling $S_{\max}=\tfrac{1}{1-p}$ ($N\to\infty$).
+\end{KR}
+
+\begin{KR}{Recipe: Reason About MP Scheduling}\\
+    Need balance $\to$ SQMS; need cache affinity $\to$ MQMS; imbalance $\to$ migration / work-stealing.
+\end{KR}
+
+\begin{KR}{Recipe: Pick a Linux Scheduler}\\
+    hard deadline $\to$ \texttt{DEADLINE}; strict priority $\to$ \texttt{FIFO}/\texttt{RR}; fairness $\to$ \texttt{OTHER} (EEVDF); background $\to$ \texttt{BATCH}/\texttt{IDLE}.
+\end{KR}
+
+\begin{KR}{Recipe: Build a Lock}\\
+    atomic op (\texttt{TAS}) $\to$ spin (cheap read first = \texttt{TTAS}) $\to$ or block via OS mutex/semaphore (no spin).
+\end{KR}
+
+\begin{formula}{Amdahl's Law}\\
+    $S(N)=\dfrac{1}{(1-p)+\tfrac{p}{N}}$,\quad $S_{\max}=\dfrac{1}{1-p}$
+\end{formula}
+
+\begin{example2}{Ex.\ S6/7/9 -- Scheduling \& categories}\\
+    Explain SQMS/MQMS and the three scheduler categories.
+    \tcblower
+    SQMS: 1 queue (simple, contention, cache bounce). MQMS: per-CPU (\important{cache affinity}, imbalance). Categories: \important{RT} (\texttt{FIFO}/\texttt{RR}/\texttt{DEADLINE}), \important{Fair} (\texttt{OTHER}=EEVDF, RB-tree on \texttt{vruntime}, \texttt{nice}), \important{Low} (\texttt{BATCH}/\texttt{IDLE}).
+\end{example2}
+
+\begin{example2}{Ex.\ S8 -- Amdahl worked}\\
+    $p=0.75$: speed-up on 4 cores? maximum?
+    \tcblower
+    $S(4)=\tfrac{1}{0.25+0.1875}\approx{}$ \important{$2.29\times$}; $S_{\max}=\tfrac{1}{0.25}={}$ \important{$4\times$}.
+\end{example2}
+
+\begin{example2}{Ex.\ S11 -- Critical section}\\
+    What is a critical section and how is entry made atomic?
+    \tcblower
+    RW-shared data; one task inside at a time. Atomicity: disable IRQ $\cdot$ ISA atomic $\cdot$ Peterson/spinlock $\cdot$ language $\cdot$ OS mutex/semaphore (\important{blocks, no spin}).
+\end{example2}
+
+\begin{example2}{Ex.\ -- TAS vs TTAS}\\
+    Why is TTAS faster under contention?
+    \tcblower
+    TAS spins with atomic \emph{writes} $\to$ bus lock + invalidation. TTAS spins on a cached \emph{read}, writes only when the lock looks free $\to$ far less coherence traffic, near-ideal.
+\end{example2}

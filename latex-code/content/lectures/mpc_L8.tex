@@ -1,0 +1,77 @@
+\section{L8 / 8a -- GPU, CUDA \& OpenCL}
+
+\begin{KR}{Recipe: Size a CUDA / OpenCL Launch}\\
+    one thread per element $\to$ \#threads = \#elements; pick \texttt{threadsPerBlock} (multiple of 32 = warp); grid $=\lceil$elements/block$\rceil$; 2-D \texttt{[R][C]} $\to$ \texttt{threadIdx.x}$\in0..R{-}1$, \texttt{.y}$\in0..C{-}1$.
+\end{KR}
+
+\begin{KR}{Recipe: Convert a Loop to a Kernel}\\
+    drop the loop $\to$ \texttt{i=get\_global\_id(0)} (CUDA \texttt{threadIdx/blockIdx}) $\to$ body on element \texttt{i}; work-items must be independent.
+\end{KR}
+
+\begin{KR}{Recipe: Map CUDA $\leftrightarrow$ OpenCL}\\
+    thread/block/grid/SM $\equiv$ work-item/work-group/NDRange/CU; host$\to$device$\to$CU$\to$PE.
+\end{KR}
+
+\begin{example2}{Ex.\ S4/5 -- GPU vs CPU}\\
+    How do GPU and CPU differ; thread/loop relationship?
+    \tcblower
+    CPU = latency-optimised (few fast threads); GPU = \important{throughput} (many slow threads). Each loop iteration $\to$ one GPU thread.
+\end{example2}
+
+\begin{example2}{Ex.\ S6/7 -- Thread \& block organisation}\\
+    Into how many threads is a $[10][5]$ op divided? threadID range?
+    \tcblower
+    One per element $\to$ \important{$10\times5=50$ threads}; \texttt{threadIdx.x}$\in0..9$, \texttt{threadIdx.y}$\in0..4$ (IDs $(0,0)..(9,4)$). Threads grouped into blocks, blocks into a grid.
+\end{example2}
+
+\begin{example2}{Ex.\ S8/9 -- Execution model / SM}\\
+    What is an SM? How are blocks executed?
+    \tcblower
+    \important{SM} = Streaming Multiprocessor; a block maps to an SM, which runs threads in \important{warps of 32}. The grid of blocks is distributed across SMs (queue the rest). Size blocks $\times$32.
+\end{example2}
+
+\begin{example2}{Ex.\ S10/11 -- Limitations}\\
+    Why not one thread per pixel for everything?
+    \tcblower
+    Divergent branches serialise a warp; memory coalescing matters; too-fine work wastes scheduling. Best with regular, independent, arithmetic-heavy data.
+\end{example2}
+
+\begin{example2}{Ex.\ S14/15 -- Rendering pipeline}\\
+    Name the stages; why is it so parallel?
+    \tcblower
+    world coords $\to$ vertex $\to$ assembly $\to$ (geometry) $\to$ rasterise $\to$ fragment (per pixel) $\to$ blend. Data \important{expands} few vertices $\to$ millions of pixels = massively parallel per-pixel work.
+\end{example2}
+
+\begin{example2}{Ex.\ S21--26 -- OpenCL models}\\
+    Name the four models and the memory regions.
+    \tcblower
+    Platform / Execution / Memory / Programming. work-item/work-group/NDRange; \important{weak consistency}; regions Global / Constant / Local / Private.
+\end{example2}
+
+\begin{example2}{Ex.\ S27/28 -- Loop $\to$ OpenCL kernel}\\
+    Rewrite \texttt{for(i<4096) c[i]=a[i]+b[i];} and give the NDRange.
+    \tcblower
+\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+__kernel void vadd(__global float*a,*b,*c){
+  int i=get_global_id(0); c[i]=a[i]+b[i]; }
+\end{lstlisting}
+    NDRange = 4096 work-items (e.g.\ work-group 512); loop replaced by the index space.
+\end{example2}
+
+\begin{example2}{Ex.\ S29 -- Coarse vs fine scheduling}\\
+    Two scheduling levels; why interleave warps?
+    \tcblower
+    \important{Coarse}: blocks $\to$ SMs. \important{Fine}: warp scheduler issues 32-thread warps, dual-issue, \emph{interleaves} -- when one stalls on memory, another runs $\to$ \important{hides latency}.
+\end{example2}
+
+\begin{example2}{Ex.\ S31--33 -- OpenCL queue \& sync}\\
+    Command-queue ordering? Where can you synchronise?
+    \tcblower
+    Host enqueues in order; completion in/out-of-order. Sync \important{only within a work-group} (barrier, fence, atomics) -- none between work-groups.
+\end{example2}
+
+\begin{example2}{Ex.\ S40/41 -- AMP recap}\\
+    Different ISA under one OS?
+    \tcblower
+    \important{No} -- separate OSes coupled by openAMP (\texttt{remoteproc} + \texttt{rpmsg}/\texttt{virtio}). Same as L7.
+\end{example2}

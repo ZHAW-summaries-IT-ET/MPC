@@ -1,10 +1,10 @@
-\section{L1 -- Introduction \& Task Decomposition}
+\section{L1 Introduction \& Task Decomposition}
 
 \subsection{Vocabulary \& Platform Model}
 
 \mult{2}
 
-\begin{definition}{Compute Hierarchy}\\
+\begin{definition}{Compute Hierarchy and Vocabulary}\\
     Host \emph{delegates to} a Compute Device.
     \begin{itemize}
         \item \textbf{Host}: controller that delegates
@@ -12,6 +12,7 @@
         \item \textbf{CU} $\to$ \textbf{PE} $\to$ \textbf{FU} (units inside the device)
         \item \textbf{UE}: process/thread running a task
     \end{itemize}
+     %TODO: insert image slide 12 with notes
 \end{definition}
 
 \begin{definition}{Task}
@@ -24,15 +25,19 @@
 \multend
 
 \begin{KR}{Recipe: Map Platform $\to$ Terminology}\\
-    \paragraph{Find the host} which side delegates work.
-    \paragraph{Find the device} which side receives it; inside it CU $\to$ PE $\to$ FU.
-    \paragraph{Identify UEs} each spawned process/thread; a \emph{task} is one work slice it runs.
+    \textbf{Find the host} which side delegates work.
+
+    \textbf{Find the device} which side receives it; inside it CU $\to$ PE $\to$ FU.
+    
+    \textbf{Identify UEs} each spawned process/thread; a \emph{task} is one work slice it runs.
 \end{KR}
 
-\begin{example2}{Ex.\ S12/13 -- CB1 / Jetson terminology}\\
+\begin{example2}{CB1 / Jetson terminology}\\
     Programming on the CB1, delegating to the Jetson Nano. What is what?
     \tcblower
-    CB1 = \important{Host}; Nano = \important{Device}; Nano SMs = CUs; CUDA cores = PEs; ALU/FPU = FU; spawned threads = UEs; one Sobel slice = task.
+    CB1 = \important{Host}; Nano = \important{Device}; Nano SMs = CUs; CUDA cores = PEs; ALU/FPU = FU; 
+    spawned threads = UEs; one Sobel slice = task.
+    %TODO: insert translation from markdown
 \end{example2}
 
 \subsection{Parallel Patterns}
@@ -47,7 +52,7 @@
     \end{enumerate}
 \end{concept}
 
-\begin{concept}{Finding Concurrency}\\
+\begin{concept}{Finding Concurrency}
     Two groups of patterns:
     \begin{itemize}
         \item \textbf{Decomposition}: split by \emph{function} (task) or by \emph{data/loop}
@@ -86,7 +91,7 @@
 
 \subsection{Task Decomposition}
 
-\begin{concept}{Functional vs Loop Splitting}\\
+\begin{concept}{Functional vs Loop Splitting}
     \begin{itemize}
         \item \textbf{Functional}: split by named function (few tasks, limited)
         \item \textbf{Loop/data}: split per-element loop by region (scales -- preferred)
@@ -98,11 +103,15 @@
 \end{definition}
 
 \begin{KR}{Recipe: Task-Decompose an Algorithm}\\
-    \paragraph{Draw the CFG} nodes = functions, edges = data deps.
-    \paragraph{Count distinct actions} = functional tasks.
-    \paragraph{Find independent tasks} no path between $\Rightarrow$ concurrent.
-    \paragraph{Try both splittings} functional vs loop/region.
-    \paragraph{State parallelism + joins}
+    \textbf{Draw the CFG} nodes = functions, edges = data deps.
+
+    \textbf{Count distinct actions} = functional tasks.
+
+    \textbf{Find independent tasks} no path between $\Rightarrow$ concurrent.
+
+    \textbf{Try both splittings} functional vs loop/region.
+
+    \textbf{State parallelism + joins}
 \end{KR}
 
 \begin{example2}{Ex.\ S26--29 -- Decompose Sobel / read CFG}\\
@@ -115,7 +124,7 @@
 
 \mult{2}
 
-\begin{concept}{Group / Order / Share}\\
+\begin{concept}{Group / Order / Share}
     \begin{itemize}
         \item \textbf{Group}: tasks with same data/constraints
         \item \textbf{Order}: producer before consumer
@@ -123,7 +132,7 @@
     \end{itemize}
 \end{concept}
 
-\begin{definition}{Data-Sharing Types}\\
+\begin{definition}{Data-Sharing Types}
     \begin{itemize}
         \item read-only
         \item effectively-local
@@ -133,10 +142,10 @@
 
 \multend
 
-\begin{KR}{Recipe: Dependency Analysis}\\
-    \paragraph{Group} same data/constraints together.
-    \paragraph{Order} add constraint per producer$\to$consumer (+ ghost-exchange before boundary).
-    \paragraph{Classify} read-only / local / read-write; strict ordering removes ``potentially''.
+\begin{KR}{Recipe: Dependency Analysis}
+    \textbf{Group} same data/constraints together.
+    \textbf{Order} add constraint per producer$\to$consumer (+ ghost-exchange before boundary).
+    \textbf{Classify} read-only / local / read-write; strict ordering removes ``potentially''.
 \end{KR}
 
 \begin{example2}{Ex.\ S30--33 -- Apply to Sobel}\\
@@ -147,7 +156,7 @@
 
 \subsection{Task Parallelism \& Fork--Join}
 
-\begin{concept}{Task-Parallelism Checks}\\
+\begin{concept}{Task-Parallelism Checks}
     \begin{itemize}
         \item compute $>$ management overhead
         \item \#tasks $\geq$ \#PEs (more is better)
@@ -156,7 +165,7 @@
     \end{itemize}
 \end{concept}
 
-\begin{definition}{Fork--Join}\\
+\begin{definition}{Fork--Join}
     Clone code into concurrent tasks, then \emph{join} (wait). \important{Not} POSIX \texttt{fork()}; suits recursive/irregular work.
 \end{definition}
 
@@ -174,7 +183,7 @@
 
 \mult{2}
 
-\begin{definition}{Process}\\
+\begin{definition}{Process}
     Running program.
     \begin{itemize}
         \item unit of resource + scheduling
@@ -183,7 +192,7 @@
     \end{itemize}
 \end{definition}
 
-\begin{definition}{Thread}\\
+\begin{definition}{Thread}
     Inside a process.
     \begin{itemize}
         \item shares the process's memory

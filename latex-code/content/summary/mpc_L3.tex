@@ -32,10 +32,10 @@
 \end{definition}
 
 \begin{KR}{Recipe: Predict OpenMP Behaviour}\\
-    \paragraph{Read directives} replicate vs worksharing.
-    \paragraph{Scope each var} shared / private / reduction.
-    \paragraph{Find races} shared var written by $>1$ iteration $\to$ indeterminate.
-    \paragraph{Count} multiply by thread count only in replicated regions.
+    \textbf{Read directives} replicate vs worksharing.
+    \textbf{Scope each var} shared / private / reduction.
+    \textbf{Find races} shared var written by $>1$ iteration $\to$ indeterminate.
+    \textbf{Count} multiply by thread count only in replicated regions.
 \end{KR}
 
 \begin{example2}{Ex.\ S7 -- How many prints?}\\

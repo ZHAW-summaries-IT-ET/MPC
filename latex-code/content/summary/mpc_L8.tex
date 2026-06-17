@@ -27,9 +27,9 @@
 \end{definition}
 
 \begin{KR}{Recipe: Size a CUDA / OpenCL Launch}\\
-    \paragraph{One thread per element} \#threads = \#elements.
-    \paragraph{Block/grid} \texttt{threadsPerBlock} multiple of 32; grid $=\lceil$elements/block$\rceil$.
-    \paragraph{Index ranges} \texttt{[R][C]} $\to$ \texttt{threadIdx.x}$\in0..R{-}1$, \texttt{.y}$\in0..C{-}1$.
+    \textbf{One thread per element} \#threads = \#elements.
+    \textbf{Block/grid} \texttt{threadsPerBlock} multiple of 32; grid $=\lceil$elements/block$\rceil$.
+    \textbf{Index ranges} \texttt{[R][C]} $\to$ \texttt{threadIdx.x}$\in0..R{-}1$, \texttt{.y}$\in0..C{-}1$.
 \end{KR}
 
 \begin{example2}{Ex.\ S4--7 -- GPU vs CPU \& thread count}\\

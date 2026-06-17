@@ -51,10 +51,10 @@
 
 \begin{KR}{Recipe: Decode a NEON Intrinsic}\\
     Pattern \texttt{v <op> q? \_ <type>}:
-    \paragraph{op} the operation (\texttt{mul}, \texttt{mla}, \ldots).
-    \paragraph{q?} present $\Rightarrow$ 128-bit Q, else 64-bit D.
-    \paragraph{type} \texttt{<base><bits>x<count>}: \emph{count} = lanes, \emph{bits} = lane width.
-    \paragraph{result} lane-wise op over \emph{count} elements.
+    \textbf{op} the operation (\texttt{mul}, \texttt{mla}, \ldots).
+    \textbf{q?} present $\Rightarrow$ 128-bit Q, else 64-bit D.
+    \textbf{type} \texttt{<base><bits>x<count>}: \emph{count} = lanes, \emph{bits} = lane width.
+    \textbf{result} lane-wise op over \emph{count} elements.
 \end{KR}
 
 \begin{example2}{Ex.\ S18/19 -- Decode intrinsics}\\

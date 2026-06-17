@@ -40,12 +40,12 @@
 \end{definition}
 
 \begin{KR}{Recipe: Trace a Memory Access}\\
-    \paragraph{Pipeline} stage requests an address.
-    \paragraph{Cache} hit $\to$ done; miss $\to$ continue.
-    \paragraph{MPU} access allowed?
-    \paragraph{MMU/TLB} hit $\to$ frame; miss $\to$ walk page tables.
-    \paragraph{Page fault} empty $\to$ MM loads frame from disk, updates page dir.
-    \paragraph{Fill} TLB caches mapping; cache reads a line; write sets \important{dirty bit}.
+    \textbf{Pipeline} stage requests an address.
+    \textbf{Cache} hit $\to$ done; miss $\to$ continue.
+    \textbf{MPU} access allowed?
+    \textbf{MMU/TLB} hit $\to$ frame; miss $\to$ walk page tables.
+    \textbf{Page fault} empty $\to$ MM loads frame from disk, updates page dir.
+    \textbf{Fill} TLB caches mapping; cache reads a line; write sets \important{dirty bit}.
 \end{KR}
 
 \begin{example2}{Ex.\ S6--12 -- Worked code trace}\\

@@ -1,11 +1,27 @@
 \section{L4 -- SIMD (Flynn, NEON, MISD)}
 
-\begin{KR}{Recipe: Decode a NEON Intrinsic}\\
-    Pattern \texttt{v <op> q? \_ <type>}: \emph{op} = operation; \emph{q} present $\Rightarrow$ 128-bit Q else 64-bit D; \emph{type} \texttt{<base><bits>x<count>\_t} $\to$ \emph{count} = lanes. Lanes $=\tfrac{\text{reg width}}{\text{lane bits}}$.
-\end{KR}
+\subsection{Flynn's Taxonomy}
+
+\mult{2}
+
+\begin{definition}{The Four Classes}\\
+    instruction streams $\times$ data streams:
+    \begin{itemize}
+        \item \textbf{SISD}: 1 ALU (single core)
+        \item \textbf{SIMD}: 1 instr, many lanes
+        \item \textbf{MISD}: lockstep / dependability
+        \item \textbf{MIMD}: independent cores
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{SIMD $\to$ SIMT $\to$ SPMD}\\
+    Increasingly abstract versions of the same lockstep-on-data idea (hardware $\to$ Nvidia threads $\to$ software pattern).
+\end{concept}
+
+\multend
 
 \begin{KR}{Recipe: Classify with Flynn}\\
-    instruction streams $\times$ data streams: 1/1 SISD, 1/many SIMD, many/1 MISD, many/many MIMD.
+    Count instruction streams and data streams: 1/1 SISD, 1/many SIMD, many/1 MISD, many/many MIMD.
 \end{KR}
 
 \begin{example2}{Ex.\ S6/9 -- SPMD pattern}\\
@@ -14,11 +30,32 @@
     One program per UE, unique ID, branch/index by ID. It is the software generalisation of \important{SIMD} (same instruction, different data).
 \end{example2}
 
-\begin{example2}{Ex.\ S10/17 -- SIMD motivation \& NEON}\\
-    Why vectorise? What is NEON?
-    \tcblower
-    One instruction processes many lanes $\to$ throughput. NEON = ARM SIMD; \important{Q}=128-bit ($2{\times}64$/$4{\times}32$/$8{\times}16$/$16{\times}8$), \important{D}=64-bit; built on \important{MAC}, no divide.
-\end{example2}
+\subsection{ARM NEON}
+
+\begin{definition}{NEON Registers \& Lanes}\\
+    ARM SIMD unit.
+    \begin{itemize}
+        \item \textbf{Q} (128-bit) = $2{\times}64$ / $4{\times}32$ / $8{\times}16$ / $16{\times}8$
+        \item \textbf{D} (64-bit) = half as many lanes
+    \end{itemize}
+    % INSERT IMAGE: L4 slide 13 -- register split into lanes
+\end{definition}
+
+\begin{concept}{NEON Properties}\\
+    \begin{itemize}
+        \item built around \important{MAC} (multiply-accumulate)
+        \item \important{no divide} (reciprocal estimate only)
+        \item type name \texttt{<base><bits>x<count>\_t}
+    \end{itemize}
+\end{concept}
+
+\begin{KR}{Recipe: Decode a NEON Intrinsic}\\
+    Pattern \texttt{v <op> q? \_ <type>}:
+    \paragraph{op} the operation (\texttt{mul}, \texttt{mla}, \ldots).
+    \paragraph{q?} present $\Rightarrow$ 128-bit Q, else 64-bit D.
+    \paragraph{type} \texttt{<base><bits>x<count>}: \emph{count} = lanes, \emph{bits} = lane width.
+    \paragraph{result} lane-wise op over \emph{count} elements.
+\end{KR}
 
 \begin{example2}{Ex.\ S18/19 -- Decode intrinsics}\\
     \texttt{vmulq\_f64}? lanes in \texttt{uint16x4\_t}? \texttt{vmul\_lane\_u16(a,b,L)}?
@@ -26,14 +63,28 @@
     \texttt{vmulq\_f64}: 128-bit lane-wise multiply of \important{2 doubles} $\to$ \texttt{float64x2\_t}. \texttt{uint16x4\_t}: \important{4 lanes}. \texttt{vmul\_lane}: broadcast \texttt{b[L]} to all lanes, multiply by \texttt{a}.
 \end{example2}
 
-\begin{example2}{Ex.\ S20 -- Lab scenario (calculate)}\\
-    Filtering with NEON: how many lanes/iterations to process $K$ elements?
+\begin{example2}{Ex.\ S20 -- Lab: lanes/iterations}\\
+    Process $K$ elements with NEON -- how many vector ops?
     \tcblower
-    Lanes per op = vector width / element size; iterations $=\lceil K/\text{lanes}\rceil$. E.g.\ \texttt{uint16x8} on $K$ pixels $\to \lceil K/8\rceil$ vector ops (+ MAC for the filter).
+    lanes = vector width / element size; iterations $=\lceil K/\text{lanes}\rceil$. E.g.\ \texttt{uint16x8} $\to \lceil K/8\rceil$ vector ops (+ MAC for the filter).
 \end{example2}
 
-\begin{example2}{Ex.\ S21--24 -- MISD / lockstep}\\
-    What is MISD? Real-world example?
+\subsection{MISD / Lockstep}
+
+\begin{concept}{Dependable Computing}\\
+    MISD spends \emph{redundant hardware} on reliability, not speed (opposite goal to SIMD/MIMD).
+\end{concept}
+
+\begin{definition}{Lockstep Variants}\\
+    \begin{itemize}
+        \item tight: 2 CPUs $0$--$2$ clk apart, compare bus $\to$ RESET (e.g.\ ABS)
+        \item loose: async, dissimilar impls + acceptance voting
+        \item \textbf{2oo3}: one fault tolerated
+    \end{itemize}
+\end{definition}
+
+\begin{example2}{Ex.\ S21--24 -- Real-world MISD}\\
+    Where do you see lockstep in practice?
     \tcblower
-    Many instructions on one data stream, for \important{dependability} not speed. \important{U96 / Zynq ZU3EG} $2{\times}$Cortex-R5F lockstep: compare bus $\to$ RESET on mismatch (e.g.\ ABS). Loose = dissimilar impls + acceptance voting; \emph{2oo3} tolerates one fault.
+    \important{U96 / Zynq ZU3EG}, $2{\times}$Cortex-R5F in tightly-coupled lockstep.
 \end{example2}

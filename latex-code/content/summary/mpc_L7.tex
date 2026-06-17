@@ -1,55 +1,116 @@
 \section{L7 -- CPU Architectures}
 
-\begin{KR}{Recipe: Classify a CPU Memory Architecture}\\
-    shared I+D bus $\to$ Von Neumann; fully separate $\to$ Harvard; split L1 I/D but unified L2/RAM $\to$ \important{Modified Harvard} (e.g.\ A53); DSP separate program/data bus $\to$ Harvard.
+\subsection{Memory Architectures}
+
+\mult{2}
+
+\begin{definition}{Three Architectures}\\
+    \begin{itemize}
+        \item \textbf{Von Neumann}: shared I+D bus
+        \item \textbf{Harvard}: separate I/D
+        \item \textbf{Modified Harvard}: split L1, unified L2/RAM
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Parallelising a CPU}\\
+    \begin{itemize}
+        \item multicore
+        \item multiple FUs (data parallelism)
+        \item multiple pipelines (instruction)
+        \item heterogeneous PEs
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Classify a CPU Architecture}\\
+    shared bus $\to$ Von Neumann; fully separate $\to$ Harvard; split L1 + unified L2 $\to$ \important{Modified Harvard} (e.g.\ A53).
 \end{KR}
 
-\begin{KR}{Recipe: Identify the Parallelism Mechanism}\\
-    multiple FUs (VLIW) = data; multiple pipelines (superscalar) = instruction; spare slots filled by 2nd thread = SMT; separate cores = multicore/AMP.
-\end{KR}
-
-\begin{KR}{Recipe: Set Up AMP}\\
-    same ISA $\to$ SMP/big.LITTLE one OS; different ISA $\to$ separate OS/bare-metal per core + openAMP (\texttt{remoteproc} boots ELF, \texttt{rpmsg}/\texttt{virtio} comms).
-\end{KR}
-
-\begin{example2}{Ex.\ S4--7 -- GP-CPU architectures}\\
-    Von Neumann vs Harvard vs Modified Harvard? Ways to parallelise a CPU?
+\begin{example2}{Ex.\ S4--7 -- A53 architecture}\\
+    Separate L1-I/L1-D, unified L2 -- which architecture? Ways to parallelise?
     \tcblower
-    Shared / separate / split-L1+unified-L2. Parallelise via: multicore, multiple FUs (data), multiple pipelines (instruction), heterogeneous PEs.
+    \important{Modified Harvard} (Harvard inside, Von Neumann outside). Parallelise via multicore, FUs, pipelines, PEs.
 \end{example2}
 
-\begin{example2}{Ex.\ S5 -- A53 architecture}\\
-    Separate L1-I/L1-D, unified L2 -- which architecture?
-    \tcblower
-    \important{Modified Harvard}: Harvard inside (split L1), Von Neumann outside (unified L2/memory).
-\end{example2}
+\subsection{Multiple Functional Units (VLIW)}
 
-\begin{example2}{Ex.\ S8--10 -- DSP / VLIW}\\
+\begin{definition}{VLIW}\\
+    The \emph{compiler} packs one op per FU (.M/.D/.L/.S) into a wide instruction word, run in parallel. Big code, binary-incompatible; + software pipelining.
+\end{definition}
+
+\begin{example2}{Ex.\ S8--10 -- DSP}\\
     What memory architecture? How does execution work?
     \tcblower
-    \important{Harvard} (separate program/data bus keeps MAC fed). \important{VLIW}: compiler packs one op per FU (.M/.D/.L/.S) into a wide word, run in parallel (+ software pipelining). Big code, binary-incompatible.
+    \important{Harvard} (separate program/data bus keeps MAC fed); \important{VLIW} execution + software pipelining.
 \end{example2}
+
+\subsection{Pipelines}
+
+\mult{2}
+
+\begin{definition}{Hazards}\\
+    \begin{itemize}
+        \item structural, data, control
+        \item RISC = pipeline-friendly; CISC = microcoded
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Pipeline \& Issue}\\
+    \begin{itemize}
+        \item super-pipeline: finer stages (faster)
+        \item superscalar: more pipelines (several/cycle)
+        \item order: in-order $\to$ OoO exec $\to$ OoO issue+exec
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Identify the Parallelism Mechanism}\\
+    multiple FUs (VLIW)=data; multiple pipelines (superscalar)=instruction; idle slots filled by 2nd thread=SMT; separate cores=multicore/AMP.
+\end{KR}
 
 \begin{example2}{Ex.\ S11--14 -- Pipelines}\\
-    Hazards? Super-pipeline vs superscalar? Issue/execute order?
+    Super-pipeline vs superscalar? Issue/execute order?
     \tcblower
-    Hazards: structural/data/control. \important{Super-pipeline} = finer stages (issue faster); \important{superscalar} = more pipelines (several/cycle). Order: in-order $\to$ OoO exec $\to$ \important{OoO issue+exec}.
+    Super-pipeline = finer stages (issue faster); superscalar = more pipelines (several/cycle). Order: in-order $\to$ OoO exec $\to$ \important{OoO issue+exec}.
 \end{example2}
 
-\begin{example2}{Ex.\ S15--18 -- Co-processors}\\
-    How does a co-processor work and what are its drawbacks?
+\subsection{Co-processors \& SMT}
+
+\begin{definition}{Co-processor}\\
+    CPU passes unrecognised instructions to it and \emph{stalls} (8087 + 8086 on \texttt{FMUL}); own ISA/clock/mem (NEON). Costly decoders.
+\end{definition}
+
+\begin{concept}{SMT (Hyperthreading)}\\
+    2 threads/core fill \important{idle issue slots}. Requires a \emph{superscalar} core (spare slots). $\sim$30\% gain; security issues.
+\end{concept}
+
+\begin{example2}{Ex.\ S15--19 -- Co-processor \& why SMT needs superscalar}\\
+    How does a co-processor work? Why does SMT need superscalar?
     \tcblower
-    CPU passes unrecognised instructions to it; CPU \emph{stalls} (8087 + 8086 on \texttt{FMUL}); own ISA/clock/mem (NEON). Drawbacks: expensive decoders, integration cost, compiler burden.
+    Co-pro: CPU offloads + stalls. SMT fills idle slots with a 2nd thread; only superscalar cores have multiple slots/cycle to fill -- a scalar core has nothing spare.
 \end{example2}
 
-\begin{example2}{Ex.\ S19 -- Why SMT needs superscalar}\\
-    Why does SMT require a superscalar core?
-    \tcblower
-    SMT fills \important{idle issue slots} with a 2nd thread; only superscalar cores \emph{have} multiple slots/pipelines per cycle. $\sim$30\% gain (cache-stall dependent); security issues.
-\end{example2}
+\subsection{Asymmetric Multiprocessing}
 
-\begin{example2}{Ex.\ S20--25 -- AMP / openAMP}\\
-    AMP scenarios? Different ISA under one OS? How do cores communicate?
+\begin{concept}{AMP Scenarios}\\
+    different/same ISA, different clocks, big.LITTLE (same ISA), different/no OS.
+\end{concept}
+
+\begin{definition}{openAMP}\\
+    \begin{itemize}
+        \item \texttt{remoteproc}: boots a remote core's ELF
+        \item \texttt{rpmsg} over \texttt{virtio}: ring-buffer messaging
+    \end{itemize}
+\end{definition}
+
+\begin{KR}{Recipe: Set Up AMP}\\
+    same ISA $\to$ SMP/big.LITTLE one OS; different ISA $\to$ separate OS/bare-metal per core + openAMP (\texttt{remoteproc}, \texttt{rpmsg}/\texttt{virtio}).
+\end{KR}
+
+\begin{example2}{Ex.\ S20--25 -- Different ISA under one OS?}\\
+    Can different-ISA cores share one OS? How do they communicate?
     \tcblower
-    Scenarios: diff/same ISA, diff clocks, big.LITTLE, diff/no OS. Different ISA under one OS = \important{No} $\to$ separate OSes + \important{openAMP}: \texttt{remoteproc} boots the ELF, \texttt{rpmsg}/\texttt{virtio} ring buffers carry messages. Zynq: 4$\times$A53 SMP + 2$\times$R5 lockstep + FPGA.
+    \important{No} (one kernel = one ISA; big.LITTLE works only because same ISA). Different ISA $\to$ separate OSes + openAMP. Zynq: 4$\times$A53 SMP + 2$\times$R5 lockstep + FPGA.
 \end{example2}

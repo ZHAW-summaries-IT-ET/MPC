@@ -1,116 +1,200 @@
-\section{L1 Introduction \& Task Decomposition}
+\section{L1 -- Introduction \& Task Decomposition}
 
-\begin{definition}{Vocabulary}\\
-    Explain Host, Device, CU, PE, FU, UE, task.
-    \tcblower
-    Host delegates work to a Compute \important{Device}; device = CU(s) $\to$ PE(s) $\to$ FU(s). 
-    UE = process/thread that runs a task; task = OS process/thread \emph{or} a piece of parallel work.
-    %TODO: insert image slide 12 with notes
+\subsection{Vocabulary \& Platform Model}
+
+\mult{2}
+
+\begin{definition}{Compute Hierarchy}\\
+    Host \emph{delegates to} a Compute Device.
+    \begin{itemize}
+        \item \textbf{Host}: controller that delegates
+        \item \textbf{Device}: receives the work
+        \item \textbf{CU} $\to$ \textbf{PE} $\to$ \textbf{FU} (units inside the device)
+        \item \textbf{UE}: process/thread running a task
+    \end{itemize}
 \end{definition}
 
-\begin{example2}{Ex.\ S13 -- CB1 / Jetson terminology}\\
-    Programming on the CB1, delegating to the Jetson Nano -- what is what?
-    \tcblower
-    CB1 = \important{Host}; Nano = \important{Device}; Nano SMs = CUs; CUDA cores = PEs; ALU/FPU = FU; spawned threads = UEs; one Sobel slice = task.
-    %TODO: insert translation from markdown
-\end{example2}
+\begin{definition}{Task}
+    \begin{itemize}
+        \item OS sense: a process \emph{or} a thread
+        \item parallel sense: a piece of a parallel program (a unit of work)
+    \end{itemize}
+\end{definition}
+
+\multend
 
 \begin{KR}{Recipe: Map Platform $\to$ Terminology}\\
-    Host (delegates) $\to$ Device (receives) $\to$ CU $\to$ PE $\to$ FU. UE = process/thread running a task.
+    \paragraph{Find the host} which side delegates work.
+    \paragraph{Find the device} which side receives it; inside it CU $\to$ PE $\to$ FU.
+    \paragraph{Identify UEs} each spawned process/thread; a \emph{task} is one work slice it runs.
 \end{KR}
 
-\subsection{Sobel}
+\begin{example2}{Ex.\ S12/13 -- CB1 / Jetson terminology}\\
+    Programming on the CB1, delegating to the Jetson Nano. What is what?
+    \tcblower
+    CB1 = \important{Host}; Nano = \important{Device}; Nano SMs = CUs; CUDA cores = PEs; ALU/FPU = FU; spawned threads = UEs; one Sobel slice = task.
+\end{example2}
 
-\begin{code}{Sobel Algorithm}\\
-    %TODO: insert image from annotated slides!!
-\end{code}
+\subsection{Parallel Patterns}
+
+\begin{concept}{Pattern Hierarchy}\\
+    Worked top$\to$bottom:
+    \begin{enumerate}
+        \item \textbf{Finding Concurrency} -- expose parallelism
+        \item \textbf{Algorithm Structure} -- organise tasks
+        \item \textbf{Supporting Structure} -- code/data structures
+        \item \textbf{Implementation Mechanisms} -- threads, sync
+    \end{enumerate}
+\end{concept}
+
+\begin{concept}{Finding Concurrency}\\
+    Two groups of patterns:
+    \begin{itemize}
+        \item \textbf{Decomposition}: split by \emph{function} (task) or by \emph{data/loop}
+        \item \textbf{Dependency Analysis}: Group / Order / Data-sharing
+    \end{itemize}
+\end{concept}
+
+\begin{example2}{Ex.\ S22/23/25 -- Name the patterns}\\
+    State the hierarchy and the Finding-Concurrency patterns.
+    \tcblower
+    Finding Concurrency $\to$ Algorithm Structure $\to$ Supporting Structure $\to$ Implementation Mechanisms; Finding Concurrency = \important{Decomposition} (task/data) + \important{Dependency Analysis} (group/order/share).
+\end{example2}
+
+\subsection{The Sobel Use Case}
+
+\begin{concept}{Sobel Pipeline (6 tasks)}\\
+    $\texttt{read\_image}\to\texttt{rgb\_2\_grey}\to\{\texttt{sobel\_x}\parallel\texttt{sobel\_y}\}\to\texttt{sobel\_all}\to\texttt{display\_image}$
+    \begin{itemize}
+        \item only \texttt{sobel\_x}\,\&\,\texttt{sobel\_y} are independent
+    \end{itemize}
+    % INSERT IMAGE: L1 slide 28 -- Sobel control-flow graph
+\end{concept}
 
 \begin{formula}{Sobel Operator}\\
     $G_x=\begin{bsmallmatrix}-1&0&+1\\-2&0&+2\\-1&0&+1\end{bsmallmatrix}$,\;
-    $G_y=\begin{bsmallmatrix}-1&-2&-1\\0&0&0\\+1&+2&+1\end{bsmallmatrix}$;\;
-    $|G|=\sqrt{G_x^2+G_y^2}\to|G_x|+|G_y|$
+    $G_y=\begin{bsmallmatrix}-1&-2&-1\\0&0&0\\+1&+2&+1\end{bsmallmatrix}$
+    \vspace{1mm}\\
+    $|G|=\sqrt{G_x^2+G_y^2}\;\to\;|G_x|+|G_y|$ (simplified)
 \end{formula}
 
-\begin{example2}{How does Sobel work?}\\
+\begin{example2}{Ex.\ S18 -- How does Sobel work?}\\
     Determine the edge-detection computation.
     \tcblower
-    Two $3\times3$ convolutions $G_x,G_y$ give the gradient; magnitude $|G|=\sqrt{G_x^2+G_y^2}$ \important{simplified} to $|G_x|+|G_y|$, then threshold.
+    Two $3\times3$ convolutions give the gradient $G_x,G_y$; magnitude $|G|$ \important{simplified} to $|G_x|+|G_y|$, then threshold.
 \end{example2}
 
-\subsection{Parallel P}
+\subsection{Task Decomposition}
+
+\begin{concept}{Functional vs Loop Splitting}\\
+    \begin{itemize}
+        \item \textbf{Functional}: split by named function (few tasks, limited)
+        \item \textbf{Loop/data}: split per-element loop by region (scales -- preferred)
+    \end{itemize}
+\end{concept}
+
+\begin{definition}{CFG / DFG}\\
+    \textbf{Control-Flow Graph}: all execution paths (nodes = actions, edges = order). \textbf{Data-Flow Graph}: data dependencies. Used to spot concurrency.
+\end{definition}
 
 \begin{KR}{Recipe: Task-Decompose an Algorithm}\\
-    \textbf{Draw the CFG} nodes = functions/actions; directed edges = data dependency (producer$\to$consumer).
-
-    \textbf{Count distinct actions} = number of functional tasks.
-
-    \textbf{Find independent tasks} no path between them $\Rightarrow$ may run concurrently.
-
-    \textbf{Try both splittings} functional (by named function, few) vs loop/data (by region, scales -- prefer).
-
-    \textbf{State parallelism + joins} how many overlap, where they synchronise.
+    \paragraph{Draw the CFG} nodes = functions, edges = data deps.
+    \paragraph{Count distinct actions} = functional tasks.
+    \paragraph{Find independent tasks} no path between $\Rightarrow$ concurrent.
+    \paragraph{Try both splittings} functional vs loop/region.
+    \paragraph{State parallelism + joins}
 \end{KR}
+
+\begin{example2}{Ex.\ S26--29 -- Decompose Sobel / read CFG}\\
+    Split Sobel into tasks. Distinct actions? Independent tasks? Parallelisation potential?
+    \tcblower
+    6 functional tasks; \important{6} distinct actions; only \texttt{sobel\_x},\texttt{sobel\_y} independent. Functional parallelism limited (2-way); \important{loop/region splitting} scales.
+\end{example2}
+
+\subsection{Dependency Analysis}
+
+\mult{2}
+
+\begin{concept}{Group / Order / Share}\\
+    \begin{itemize}
+        \item \textbf{Group}: tasks with same data/constraints
+        \item \textbf{Order}: producer before consumer
+        \item \textbf{Data-sharing}: classify each datum
+    \end{itemize}
+\end{concept}
+
+\begin{definition}{Data-Sharing Types}\\
+    \begin{itemize}
+        \item read-only
+        \item effectively-local
+        \item read-write (accumulate / multi-read-single-write)
+    \end{itemize}
+\end{definition}
+
+\multend
 
 \begin{KR}{Recipe: Dependency Analysis}\\
-    \textbf{Group} tasks sharing data/constraints.
-
-    \textbf{Order} add constraint where one consumes another's output (+ ghost-exchange before boundary).
-    
-    \textbf{Classify shared data} read-only / effectively-local / read-write (accumulate, multi-read-single-write).
+    \paragraph{Group} same data/constraints together.
+    \paragraph{Order} add constraint per producer$\to$consumer (+ ghost-exchange before boundary).
+    \paragraph{Classify} read-only / local / read-write; strict ordering removes ``potentially''.
 \end{KR}
 
+\begin{example2}{Ex.\ S30--33 -- Apply to Sobel}\\
+    Which sub-pattern matters most? Group/order/share for Sobel?
+    \tcblower
+    \important{Data Sharing}. Group \texttt{sobel\_x/y} (same grey input); order \texttt{sobel\_all} after both; grey = read-only, kernel = effectively-local, \texttt{Gx/Gy} = read-write, \texttt{sobel\_all} = \important{accumulate}.
+\end{example2}
 
+\subsection{Task Parallelism \& Fork--Join}
+
+\begin{concept}{Task-Parallelism Checks}\\
+    \begin{itemize}
+        \item compute $>$ management overhead
+        \item \#tasks $\geq$ \#PEs (more is better)
+        \item minimise data dependencies
+        \item equal work $\to$ static; uneven $\to$ dynamic / work-stealing
+    \end{itemize}
+\end{concept}
+
+\begin{definition}{Fork--Join}\\
+    Clone code into concurrent tasks, then \emph{join} (wait). \important{Not} POSIX \texttt{fork()}; suits recursive/irregular work.
+\end{definition}
 
 \begin{KR}{Recipe: Evaluate a Parallel Design}\\
-    Check: compute $>$ management overhead; \#tasks $\geq$ \#PEs; data dependencies minimal; schedule (static if equal, else dynamic / work-stealing).
+    Check compute-vs-overhead, \#tasks-vs-\#PEs, dependencies, schedule choice.
 \end{KR}
 
-
-
-
-
-
-
-\begin{example2}{Ex.\ S22/23/25 -- Pattern language}\\
-    Name the pattern hierarchy and the Finding-Concurrency patterns.
+\begin{example2}{Ex.\ S34--39 -- Evaluate \& fork-join}\\
+    Compute vs management? Tasks vs PEs? Is fork-join suitable for Sobel?
     \tcblower
-    Hierarchy: Finding Concurrency $\to$ Algorithm Structure $\to$ Supporting Structure $\to$ Implementation Mechanisms. Finding Concurrency = \important{Decomposition} (task/data) + \important{Dependency Analysis} (group/order/share).
+    Whole-function task justifies a UE (per-pixel doesn't); want \#tasks $\geq$ \#PEs $\to$ region-split; only dep = \texttt{sobel\_all} join; static schedule. Fork-join: \important{poor fit} for a fixed pipeline (it suits irregular/recursive work).
 \end{example2}
 
-\begin{example2}{Ex.\ S26/27 -- Decompose Sobel}\\
-    Split Sobel into tasks; identify parallelism; functional or loop splitting?
-    \tcblower
-    6 functional tasks; \texttt{sobel\_x}$\parallel$\texttt{sobel\_y} independent. \important{Both} apply: functional (limited, 2-way), loop splitting (region-split, scalable -- preferred).
-\end{example2}
+\subsection{Processes \& Threads}
 
-\begin{example2}{Ex.\ S28/29 -- Read the CFG}\\
-    Distinct actions? Independent tasks? Parallelisation potential? What is a CFG?
-    \tcblower
-    \important{6} distinct; only \texttt{sobel\_x},\texttt{sobel\_y} independent; functional parallelism limited (2-way), data decomposition scales. CFG = control-flow graph: all execution paths; used by compilers/profilers and to spot concurrency.
-    
-    \includegraphics[width=\linewidth]{sobel_cfg.png}
-\end{example2}
+\mult{2}
 
-\begin{example2}{Ex.\ S30--33 -- Dependency analysis}\\
-    Which sub-pattern is most relevant? Group/order/share for Sobel?
-    \tcblower
-    \important{Data Sharing} is the interesting one. Group: \texttt{sobel\_x/y} (same grey input). Order: \texttt{sobel\_all} after both finish. Share: grey = read-only, kernel = effectively-local, \texttt{Gx/Gy} = read-write, \texttt{sobel\_all} = \important{accumulate}.
-\end{example2}
+\begin{definition}{Process}\\
+    Running program.
+    \begin{itemize}
+        \item unit of resource + scheduling
+        \item own \texttt{main()} / address space
+        \item MPU-isolated; \texttt{fork()} = CoW clone
+    \end{itemize}
+\end{definition}
 
-\begin{example2}{Ex.\ S34--37 -- Evaluate task parallelism}\\
-    Compute vs management? Tasks vs PEs? Data deps? Schedule/load balancing?
-    \tcblower
-    Whole-function task justifies a UE (per-pixel doesn't). Want \#tasks $\geq$ \#PEs $\to$ region-split. Only dep is the \texttt{sobel\_all} join. Equal regions $\to$ \important{static}; else dynamic / work-stealing.
-\end{example2}
+\begin{definition}{Thread}\\
+    Inside a process.
+    \begin{itemize}
+        \item shares the process's memory
+        \item cheap $\to$ reuse via \important{thread pool}
+    \end{itemize}
+\end{definition}
 
-\begin{example2}{Ex.\ S38/39 -- Fork--Join}\\
-    What is fork-join? When is it suitable?
-    \tcblower
-    Clone code into concurrent tasks, then \emph{join} (wait). \important{Not} POSIX \texttt{fork()}. Suits recursive/irregular/dynamic task sets; a poor fit for a fixed regular pipeline like Sobel.
-\end{example2}
+\multend
 
-\begin{example2}{Ex.\ S41--45 -- Process vs Thread}\\
-    What is a process? How do processes/threads differ?
+\begin{example2}{Ex.\ S41--45 -- Process vs thread}\\
+    What is a process? How do they differ from threads?
     \tcblower
-    \emph{Process}: running program; resource + scheduling unit; own \texttt{main()}/address space; MPU-isolated; \texttt{fork()} = CoW clone, parent \texttt{wait()}s. \emph{Thread}: inside a process, shares memory, cheap $\to$ reuse via \important{thread pool}.
+    Process = isolated running program (own address space, \texttt{fork()}/\texttt{wait()}). Thread = lightweight, shares memory, created with \texttt{pthread\_create}; expensive to create $\to$ pool.
 \end{example2}

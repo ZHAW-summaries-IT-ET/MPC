@@ -1,6 +1,6 @@
 \section{L7 CPU Architectures}
 
-\subsection{GP-CPU Architectures}
+\subsubsection{GP-CPU Architectures}
 
 \mult{2}
 
@@ -32,7 +32,9 @@
     \important{Modified Harvard}: Harvard inside (split L1), von Neumann outside (unified L2/memory).
 \end{example2}
 
-\subsection{Parallelising a CPU}
+\subsubsection{Parallelising a CPU}
+
+\mult{2}
 
 \begin{concept}{Four Ways}
     \begin{itemize}
@@ -47,19 +49,25 @@
     multiple FUs (VLIW) $=$ data; multiple pipelines (superscalar) $=$ instruction; idle slots filled by a 2nd thread $=$ SMT; separate cores $=$ multicore/AMP.
 \end{KR}
 
+\multend
+
 \begin{example2}{Ex.\ Name the four}
     List four ways to add parallelism inside a CPU and the kind each provides.
      \\ \solution{Solution: }
     \important{Multicore}; \important{multiple FUs} (data); \important{multiple pipelines} (instruction); \important{heterogeneous PEs} (DSP/GPU). The ALU is not the only option (e.g.\ FPU/MAC for DSP work).
 \end{example2}
 
-\subsection{Multiple FUs: VLIW / DSP}
+\subsubsection{Multiple FUs: VLIW / DSP}
 
 \mult{2}
 
 \begin{definition}{DSP}
     Application-specific FUs: MAC (.M), data access (.D), GP-ALU (.L), shifter/ALU (.S). Harvard memory.
 \end{definition}
+
+\begin{KR}{Recipe: Recognise VLIW / DSP}
+    separate program/data bus keeping a MAC fed $\to$ Harvard DSP; one wide instruction the \emph{compiler} packed per FU $\to$ VLIW (+ software pipelining).
+\end{KR}
 
 \begin{definition}{VLIW}
     Compiler packs serial instructions into one wide word for the FUs.
@@ -69,15 +77,15 @@
     \end{itemize}
 \end{definition}
 
-\multend
-
 \begin{concept}{Software Pipelining}
     Overlap loop iterations (prologue / kernel / epilogue) to cut pipeline stalls; with VLIW gives very tight loop kernels.
 \end{concept}
 
-\begin{KR}{Recipe: Recognise VLIW / DSP}
-    separate program/data bus keeping a MAC fed $\to$ Harvard DSP; one wide instruction the \emph{compiler} packed per FU $\to$ VLIW (+ software pipelining).
-\end{KR}
+\multend
+
+
+
+
 
 \begin{example2}{Ex.\ (s8) DSP with .M/.D/.L/.S}
     What memory architecture is this? How does execution work?
@@ -85,7 +93,7 @@
     \important{Harvard} (separate program/data bus). Execution = \important{VLIW}: the compiler packs one op per FU into a wide word, run in parallel (+ software pipelining). Big, incompatible code.
 \end{example2}
 
-\subsection{CISC/RISC \& Hazards}
+\subsubsection{CISC/RISC \& Hazards}
 
 \mult{2}
 
@@ -142,6 +150,8 @@
 
 \subsection{In/Out-of-Order Execution}
 
+\mult{2}
+
 \begin{definition}{Three Modes}
     \begin{itemize}
         \item in-order issue, in-order execution
@@ -153,6 +163,8 @@
 \begin{KR}{Recipe: Identify the Mode}
     Ask whether \emph{issue} and \emph{execution} keep program order. Both ordered = simplest; OoO issue + OoO exec = most aggressive (best unit utilisation, most hardware).
 \end{KR}
+
+\multend
 
 \begin{example2}{Ex.\ Which is most aggressive?}
     Name the three superscalar scheduling modes; which extracts the most parallelism?
@@ -241,7 +253,7 @@
     \important{No} one kernel is built for one ISA (big.LITTLE works only because it's the \emph{same} ISA). Scenarios: different ISA (specialised PRU/GPU/DSP); same ISA split by task (comms vs I/O); big.LITTLE; different/no OS.
 \end{example2}
 
-\subsection{openAMP}
+\subsubsection{openAMP}
 
 \mult{2}
 
@@ -255,6 +267,8 @@
 
 \multend
 
+\mult{2}
+
 \begin{KR}{Recipe: Couple AMP Cores with openAMP}
     \paragraph{Boot} \texttt{remoteproc} loads + starts the remote ELF.
     \paragraph{Communicate} \texttt{rpmsg} messages over \texttt{virtio} ring buffers.
@@ -267,7 +281,9 @@
     \important{remoteproc}: \texttt{rproc\_boot} decodes the R5's ELF and boots it (the RPU starts halted). Communication via \important{rpmsg over virtio} ring buffers. Zynq = 4$\times$A53 SMP + 2$\times$R5 lockstep + FPGA accelerators.
 \end{example2}
 
-\subsection{Exam FS23 Q2: Architectures (RZ/V2L)}
+\multend
+
+\paragraph{Exam FS23 Q2: Architectures (RZ/V2L)}
 
 \begin{concept}{Scenario (appendix)}
     RZ/V2L: Cortex-A55 (1.2\,GHz) + Cortex-M33 (200\,MHz). L1 I/D = 32\,KB each (split), L2 = 0\,KB, L3 = 256\,KB shared; ARMv8.2-A; NEON/FPU; no MMU mentioned; openAMP links A55$\leftrightarrow$M33.

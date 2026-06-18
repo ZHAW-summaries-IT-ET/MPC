@@ -1,7 +1,5 @@
 \section{L5 Operating Systems}
 
-\subsection{The Process Concept}
-
 \mult{2}
 
 \begin{definition}{Process (OS view)}
@@ -12,6 +10,12 @@
     \end{itemize}
 \end{definition}
 
+\begin{KR}{Recipe: OS Implications of a Process}
+    \paragraph{Ownership} resources isolated $\to$ enforced by the MPU.
+    \paragraph{Scheduling} time-shared + load-balanced by the OS.
+    \paragraph{Interaction} sharing needs IPC + consistency (synchronisation).
+\end{KR}
+
 \begin{concept}{Linux: everything is a task}
     \begin{itemize}
         \item processes, threads, kernel threads
@@ -20,19 +24,13 @@
     \end{itemize}
 \end{concept}
 
-\multend
-
-\begin{KR}{Recipe: OS Implications of a Process}
-    \paragraph{Ownership} resources isolated $\to$ enforced by the MPU.
-    \paragraph{Scheduling} time-shared + load-balanced by the OS.
-    \paragraph{Interaction} sharing needs IPC + consistency (synchronisation).
-\end{KR}
-
 \begin{example2}{Ex.\ Why an MPU and a scheduler?}
     What does the OS need to support processes, and what are the two policy classes?
      \\ \solution{Solution: }
     The \important{MPU} enforces resource separation (isolation); the \important{scheduler} time-shares + load-balances. Policies = \important{RT} and \important{normal}.
 \end{example2}
+
+\multend
 
 \subsection{MP Scheduling \& Load Balancing}
 
@@ -45,6 +43,10 @@
     \end{itemize}
 \end{definition}
 
+\begin{KR}{Recipe: Balance Multiprocessor Load}
+    need cache affinity $\to$ MQMS (per-CPU queue); imbalance appears $\to$ migrate or \emph{work-steal}; keep tasks on their CPU to preserve warm caches.
+\end{KR}
+
 \begin{concept}{Fixing Imbalance}
     \begin{itemize}
         \item \textbf{migration}: move tasks (partial affinity)
@@ -52,11 +54,9 @@
     \end{itemize}
 \end{concept}
 
-\multend
 
-\begin{KR}{Recipe: Balance Multiprocessor Load}
-    need cache affinity $\to$ MQMS (per-CPU queue); imbalance appears $\to$ migrate or \emph{work-steal}; keep tasks on their CPU to preserve warm caches.
-\end{KR}
+
+
 
 \begin{example2}{Ex.\ Imbalanced MQMS}
     CPU0 runs heavy task A while B and D share CPU1; then A finishes. What's the problem and the fix?
@@ -64,7 +64,11 @@
     \important{Load imbalance}: CPU0 goes idle while B/D still cramped on CPU1. Fix with \important{migration} (move B or D over) or \important{work-stealing} (idle CPU0 takes from CPU1's queue).
 \end{example2}
 
-\subsection{The Three RT Schedulers}
+\multend
+
+\subsubsection{The Three RT Schedulers}
+
+\mult{2}
 
 \begin{definition}{RT Schedulers}
     \begin{itemize}
@@ -74,9 +78,7 @@
     \end{itemize}
 \end{definition}
 
-\begin{KR}{Recipe: Pick an RT Scheduler}
-    run-to-completion $\to$ \texttt{FIFO}; fair time-slice among equal priority $\to$ \texttt{RR}; explicit per-job deadline $\to$ \texttt{DEADLINE}.
-\end{KR}
+
 
 \begin{example2}{Ex.\ FIFO or RR?}
     Two equal-priority RT threads must share the CPU fairly. Which scheduler?
@@ -84,7 +86,13 @@
     \important{\texttt{SCHED\_RR}} time-slices equal-priority threads. \texttt{FIFO} would let the first run to completion before the second starts.
 \end{example2}
 
-\subsection{The Three Scheduler Categories}
+\begin{KR}{Recipe: Pick an RT Scheduler}
+    run-to-completion $\to$ \texttt{FIFO}; fair time-slice among equal priority $\to$ \texttt{RR}; explicit per-job deadline $\to$ \texttt{DEADLINE}.
+\end{KR}
+
+\multend
+
+\subsubsection{The Three Scheduler Categories}
 
 \mult{2}
 
@@ -105,7 +113,7 @@
 
 \multend
 
-\begin{KR}{Recipe: Classify a Scheduler}
+\begin{KR}{Recipe: Classify a Scheduler}\\
     strict priority $\to$ RT; fairness (nice, RB-tree) $\to$ \texttt{OTHER}/EEVDF; background $\to$ \texttt{BATCH}/\texttt{IDLE}.
 \end{KR}
 
@@ -124,7 +132,7 @@
     % INSERT IMAGE: L5 slide 10 Amdahl curves
 \end{formula}
 
-\begin{KR}{Recipe: Apply Amdahl's Law}
+\begin{KR}{Recipe: Apply Amdahl's Law}\\
     Find $p$ (parallel fraction) $\to$ $S(N)=\tfrac{1}{(1-p)+p/N}$ $\to$ ceiling $S_{\max}=\tfrac{1}{1-p}$ ($N\to\infty$).
 \end{KR}
 
@@ -142,6 +150,10 @@
     RW-shared data needing protection for consistency. Entry must be \important{atomic} (one task inside at a time).
 \end{definition}
 
+\begin{KR}{Recipe: Protect a Critical Section}
+    short wait + spare core $\to$ spinlock/ISA atomic; long wait / oversubscribed $\to$ OS mutex/semaphore (blocks, frees the CPU).
+\end{KR}
+
 \begin{concept}{Atomic-Entry Mechanisms}
     \begin{itemize}
         \item disable interrupts/scheduler
@@ -154,9 +166,7 @@
 
 \multend
 
-\begin{KR}{Recipe: Protect a Critical Section}
-    short wait + spare core $\to$ spinlock/ISA atomic; long wait / oversubscribed $\to$ OS mutex/semaphore (blocks, frees the CPU).
-\end{KR}
+
 
 \begin{example2}{Ex.\ Protect a shared balance}
     Two processes update a shared bank balance. What is the protected region called? Give a blocking and a spinning way.
@@ -164,14 +174,14 @@
     A \important{critical section}. Blocking: OS \important{mutex/semaphore} (thread blocks). Spinning: \important{Peterson/spinlock} or an ISA atomic (busy-wait).
 \end{example2}
 
-\subsection{TAS vs TTAS}
+\subsubsection{TAS vs TTAS}
 
 \begin{definition}{Test-and-Set}
     Atomic instruction (e.g.\ \texttt{XCHG}) writes 1 and returns the old value in one step; spinlocks loop on it. \important{Slow}: every attempt locks the bus + invalidates the line.
 \end{definition}
 
 \begin{code}{TTAS spinlock}
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 // Test-and-Test-and-Set: read first, then atomic write
 do {
   while (locked == true) ;   // spin on a cached READ (cheap)
@@ -192,8 +202,6 @@ do {
 \begin{remark}
     \textbf{Method: Modelling (be aware of)} \important{Petri nets}: places, transitions and tokens for modelling concurrent/synchronised systems [s14].
 \end{remark}
-
-\subsection{Exam FS23 Scheduler Choice}
 
 \begin{example2}{Exam FS23 Q3.4 Scheduler on the cores (6P)}
     Sobel, 4-core SMP, at least 6 chunks, streamed images. Choose a scheduler; state assumptions.

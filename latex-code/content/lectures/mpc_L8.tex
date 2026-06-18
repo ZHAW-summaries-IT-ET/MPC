@@ -51,7 +51,7 @@
 \begin{example2}{Ex.\ S27/28 Loop $\to$ OpenCL kernel}
     Rewrite \texttt{for(i<4096) c[i]=a[i]+b[i];} and give the NDRange.
     \tcblower
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 __kernel void vadd(__global float*a,*b,*c){
   int i=get_global_id(0); c[i]=a[i]+b[i]; }
 \end{lstlisting}

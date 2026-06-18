@@ -1,6 +1,6 @@
 \section{L6 Memory}
 
-\subsection{Cache \& Paging}
+\subsubsection{Cache \& Paging}
 
 \mult{2}
 
@@ -34,11 +34,11 @@
     The miss on \texttt{a[0]} fetches the \important{whole line} (incl.\ \texttt{a[1..15]}) $\to$ subsequent reads are \important{hits} (spatial locality). Resident = pages in memory; working = pages in use now.
 \end{example2}
 
-\subsection{The Memory Access Walk (worked)}
+\subsubsection{The Memory Access Walk (worked)}
 
-\begin{definition}{Access Chain}
-    CPU pipeline (IF$\cdot$ID$\cdot$EX$\cdot$MEM$\cdot$WB) $\to$ Cache $\to$ \textbf{MPU} (rights) $\to$ \textbf{MMU} (\textbf{TLB} else page-table walk) $\to$ \textbf{page fault} $\to$ MM software.
-\end{definition}
+
+
+\mult{2}
 
 \begin{KR}{Recipe: Trace a Memory Access}
     \paragraph{Cache} hit $\to$ done; miss $\to$ continue.
@@ -48,6 +48,10 @@
     \paragraph{Fill} TLB caches mapping; cache reads a line; a write sets the \important{dirty bit}.
 \end{KR}
 
+\begin{definition}{Access Chain}
+    CPU pipeline (IF$\cdot$ID$\cdot$EX$\cdot$MEM$\cdot$WB) $\to$ Cache $\to$ \textbf{MPU} (rights) $\to$ \textbf{MMU} (\textbf{TLB} else page-table walk) $\to$ \textbf{page fault} $\to$ MM software.
+\end{definition}
+
 \begin{example2}{Ex.\ (s6--12) Trace the code}
     Walk \texttt{mov ea,var1; mov eb,var2; add ea,eb; mov var3,ea}. Why is the first fetch slow but the next fast?
      \\ \solution{Solution: }
@@ -55,9 +59,11 @@
     % INSERT IMAGE: L6 slide 6/7 Simple Computer System walk
 \end{example2}
 
-\subsection{Thrashing}
+\multend
 
-\mult{2}
+\subsubsection{Thrashing}
+
+\begin{minipage}{0.65\linewidth}
 
 \begin{definition}{Two Types}
     \begin{itemize}
@@ -65,12 +71,14 @@
         \item \textbf{disk}: too few frames $\to$ page evict/reload loop
     \end{itemize}
 \end{definition}
+\end{minipage}
+    \begin{minipage}{0.34\linewidth}
 
 \begin{concept}{Effect}
     Both stall the CPU waiting on much slower memory/disk.
 \end{concept}
 
-\multend
+\end{minipage}
 
 \begin{KR}{Recipe: Diagnose Thrashing}
     repeated misses on the \emph{same cache slot} $\to$ cache thrash (fix: layout/associativity); constant page evict/reload (too few frames) $\to$ disk thrash (fix: fewer resident processes / more memory).
@@ -82,7 +90,9 @@
     \important{Cache thrashing}: each access evicts the other $\to$ repeated misses $\to$ CPU stalled.
 \end{example2}
 
-\subsection{Cost of Cache-Oblivious Code}
+\subsubsection{Cost of Cache-Oblivious Code}
+
+\mult{2}
 
 \begin{concept}{Context-Switch Cost}
     \begin{itemize}
@@ -96,13 +106,15 @@
     cache + TLB dominate (must be flushed/re-warmed). Expect CPI to spike right after a switch, then fall as caches re-fill.
 \end{KR}
 
+\multend
+
 \begin{example2}{Ex.\ CPI after a switch}
     After a context switch, why does CPI spike then fall over the next thousands of instructions?
      \\ \solution{Solution: }
     The cache + TLB are flushed $\to$ a burst of \important{misses + page-walks} $\to$ high CPI; as they \important{re-warm}, CPI drops back. This is the cost of not programming cache-aware.
 \end{example2}
 
-\subsection{Multicore L1/L2 (Read \& Writeback)}
+\subsubsection{Multicore L1/L2 (Read \& Writeback)}
 
 \mult{2}
 
@@ -117,7 +129,7 @@
     \end{itemize}
 \end{concept}
 
-\multend
+
 
 \begin{KR}{Recipe: Will a Writeback Happen?}
     Check the dirty bit: dirty + (controller decision or eviction) $\to$ write back first. Clean line $\to$ just refill. Multicore: an L1 flush cascades to L2.
@@ -128,6 +140,8 @@
      \\ \solution{Solution: }
     (a) Both get a \emph{copy} in their L1 from the shared L2 read-sharing is fine, no invalidation until a write. (b) When the controller decides \emph{or} it needs the line (eviction) and the line is \important{dirty}.
 \end{example2}
+
+\multend
 
 \subsection{Coherence \& Consistency}
 

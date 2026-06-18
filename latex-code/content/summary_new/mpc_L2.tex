@@ -11,6 +11,8 @@
     \end{itemize}
 \end{concept}
 
+\mult{2}
+
 \begin{KR}{Recipe: Choose an Algorithm-Structure Pattern}
     \paragraph{Organising principle} tasks, data, or data-flow?
     \paragraph{Structure} linear/array or recursive?
@@ -23,9 +25,11 @@
     Organise by \important{data}, array structure $\Rightarrow$ \important{Geometric Decomposition}. Task parallelism gives only a handful of functional tasks; the data view scales with the number of image regions.
 \end{example2}
 
+\multend
+
 \subsection{The Top-Down Path}
 
-\mult{2}
+\begin{minipage}{0.4\linewidth}
 
 \begin{definition}{Data Decomposition}
     Split the \emph{data structure} (image array) into chunks updated independently. Scales with \#chunks.
@@ -34,8 +38,8 @@
 \begin{definition}{Ghost / Halo Cells}
     Read-only copy of a neighbour's boundary (the $3\times3$ kernel reads 1 row/col out). Exchanged a-priori or overlapped with compute.
 \end{definition}
-
-\multend
+\end{minipage}
+\begin{minipage}{0.59\linewidth}
 
 \begin{concept}{The Path (and its justification)}
     \begin{enumerate}
@@ -47,6 +51,8 @@
         \item \textbf{SPMD} one program per UE, index by rank
     \end{enumerate}
 \end{concept}
+
+\end{minipage}
 
 \begin{KR}{Recipe: Justify the Top-Down Path}
     For each layer state \emph{why} the pattern fits: expose concurrency (data vs task) $\to$ analyse dependencies (what is shared) $\to$ organise the algorithm (stencil $\Rightarrow$ geometric) $\to$ choose supporting structures (loop parallelism + distributed array) $\to$ map to UEs (SPMD).
@@ -66,6 +72,13 @@
     Chunk \emph{size} and \emph{number} a tunable to fit the solution onto different hardware.
 \end{definition}
 
+\begin{formula}{Surface vs Volume}
+    equal volume $N^2/4$: square surface $2N$ vs strip $\tfrac{5N}{2}$ $\Rightarrow$ \important{square wins}.
+    \vspace{1mm}
+    $10\times10$: square 25 calc / 20 transfers; strip 20 / 25.
+    % INSERT IMAGE: L2 slide 13 surface vs volume sketch
+\end{formula}
+
 \begin{concept}{Impact of Granularity}
     \begin{itemize}
         \item computation scales with \emph{volume} (cells)
@@ -76,12 +89,7 @@
 
 \multend
 
-\begin{formula}{Surface vs Volume}
-    equal volume $N^2/4$: square surface $2N$ vs strip $\tfrac{5N}{2}$ $\Rightarrow$ \important{square wins}.
-    \vspace{1mm}
-    $10\times10$: square 25 calc / 20 transfers; strip 20 / 25.
-    % INSERT IMAGE: L2 slide 13 surface vs volume sketch
-\end{formula}
+\mult{2}
 
 \begin{KR}{Recipe: Tune Granularity}
     \paragraph{Enough chunks} $\geq$ cores (more for balancing).
@@ -94,6 +102,8 @@
      \\ \solution{Solution: }
     Compute $\approx 1024\cdot128 = 131072$\,px (volume); ghost $\approx 2\times1024 = 2048$\,px (surface) $\Rightarrow$ comm/compute $\approx$ \important{1.6\%} overhead negligible, so this granularity is fine.
 \end{example2}
+
+\multend
 
 \subsection{Efficiency \& Mapping Chunks to UEs}
 
@@ -109,6 +119,8 @@
 
 \multend
 
+\mult{2}
+
 \begin{KR}{Recipe: Map Chunks to UEs}
     \paragraph{Over-decompose} \#chunks $>$ \#UEs.
     \paragraph{Assign} block-cyclic / round-robin (or a dynamic queue).
@@ -120,6 +132,8 @@
      \\ \solution{Solution: }
     Over-decompose (6 $>$ 4) so a UE that finishes early takes the next chunk; assign round-robin or via a \important{dynamic queue}; pin UEs for cache affinity. Equal chunks divisible by UEs $\Rightarrow$ static is cheaper.
 \end{example2}
+
+\multend
 
 \subsection{Communication of Indices}
 

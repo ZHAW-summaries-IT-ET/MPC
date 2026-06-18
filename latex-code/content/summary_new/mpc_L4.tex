@@ -143,9 +143,7 @@
 
 \mult{2}
 
-\begin{concept}{Dependability not Speed}
-    MISD spends redundant hardware on \emph{reliability}. Opposite goal to SIMD/MIMD (which buy speed).
-\end{concept}
+
 
 \begin{definition}{Lockstep Variants}
     \begin{itemize}
@@ -156,17 +154,21 @@
     \end{itemize}
 \end{definition}
 
-\multend
-
 \begin{KR}{Recipe: Recognise a Dependability Architecture}
     Redundant channels running on the \emph{same} data + compare/vote (RESET on mismatch) $\Rightarrow$ MISD / lockstep. Real example: U96 / Zynq ZU3EG, 2$\times$Cortex-R5F lockstep.
 \end{KR}
+
+\begin{concept}{Dependability not Speed}
+    MISD spends redundant hardware on \emph{reliability}. Opposite goal to SIMD/MIMD (which buy speed).
+\end{concept}
 
 \begin{example2}{Ex.\ ABS controller}
     An ABS unit runs two CPUs that execute the same code and compare every bus access, issuing a RESET on any difference. Flynn class? Purpose?
      \\ \solution{Solution: }
     \important{MISD} (tightly-coupled lockstep). Purpose = \important{dependability}: detect a fault via the mismatch and fail safe (RESET), not to go faster.
 \end{example2}
+
+\multend
 
 \subsection{Exam FS23 NEON \& Dot Product}
 
@@ -176,26 +178,35 @@
     It's a \important{v8 architecture} NEON is integrated into the v8 pipeline (not a separate co-processor).
 \end{example2}
 
+    \begin{minipage}{0.3\linewidth}
+
 \begin{KR}{Recipe: Vectorise a Loop with NEON}
-    \paragraph{Load} pack elements into a vector (\texttt{vld1q\_*}).
-    \paragraph{Compute} lane-wise op (\texttt{vmulq\_*}, \texttt{vmlaq\_*} for MAC).
+    \paragraph{Load} pack elements into \\ a vector (\texttt{vld1q\_*}).
+    \paragraph{Compute} lane-wise op \\ (\texttt{vmulq\_*}, \texttt{vmlaq\_*} for MAC).
     \paragraph{Reduce} horizontal add across lanes (\texttt{vaddvq\_*}) for a dot product.
     \paragraph{Remainder} handle elements beyond a multiple of the lane count with scalar code.
 \end{KR}
 
+    \end{minipage}
+    \begin{minipage}{0.69\linewidth}
+
 \begin{example2}{Exam FS23 Q4.4 NEON dot product (6P)}
     Write commented (pseudo/intrinsic) NEON code for the dot product of each row-vector pair (reduced $4\times4$).
      \\ \solution{Solution: }
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 // N=4 fits one int32x4 vector exactly
 for (int i = 0; i < N; i++)          // first vector
   for (int j = 0; j < N; j++) {      // second vector
     int32x4_t va = vld1q_s32(&in[i][0]);
     int32x4_t vb = vld1q_s32(&in[j][0]);
-    int32x4_t vp = vmulq_s32(va, vb); // lane-wise multiply
-    out[i][j] = vaddvq_s32(vp);       // horizontal add of 4 lanes
+    int32x4_t vp = vmulq_s32(va, vb); // lane-wise mult.
+    out[i][j] = vaddvq_s32(vp); 
+    // horizontal add of 4 lanes
   }
 // edge: if length not a multiple of 4, do the tail scalar
 \end{lstlisting}
     Two loops over the pairs; the MAC is one vector op + a horizontal add.
 \end{example2}
+
+\end{minipage}
+

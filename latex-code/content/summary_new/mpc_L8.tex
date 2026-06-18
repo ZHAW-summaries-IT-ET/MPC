@@ -1,6 +1,6 @@
 \section{L8 GPU Architectures / CUDA / OpenCL}
 
-\subsection{GPU vs CPU}
+\subsubsection{GPU vs CPU}
 
 \mult{2}
 
@@ -28,7 +28,7 @@
     When there are many \important{independent identical} operations: the GPU runs thousands of threads and \important{hides latency} by switching between them (throughput). A CPU wins on branchy/sequential, latency-sensitive code.
 \end{example2}
 
-\subsection{Thread $\leftrightarrow$ Loop / Kernel}
+\subsubsection{Thread $\leftrightarrow$ Loop / Kernel}
 
 \mult{2}
 
@@ -40,8 +40,15 @@
     \end{itemize}
 \end{definition}
 
+\begin{KR}{Recipe: Convert a Loop to a Kernel}
+    \paragraph{Drop the loop} one thread per iteration.
+    \paragraph{Index} \texttt{i = blockIdx*blockDim + threadIdx} (CUDA) / \texttt{get\_global\_id(0)} (OpenCL).
+    \paragraph{Guard} \texttt{if (i < N)} the grid may overshoot.
+\end{KR}
+
+
 \begin{examplecode}{OpenCL Vector Add}
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 __kernel void vadd(__global float* a,
                    __global float* b,
                    __global float* c) {
@@ -51,19 +58,16 @@ __kernel void vadd(__global float* a,
 \end{lstlisting}
 \end{examplecode}
 
-\multend
 
-\begin{KR}{Recipe: Convert a Loop to a Kernel}
-    \paragraph{Drop the loop} one thread per iteration.
-    \paragraph{Index} \texttt{i = blockIdx*blockDim + threadIdx} (CUDA) / \texttt{get\_global\_id(0)} (OpenCL).
-    \paragraph{Guard} \texttt{if (i < N)} the grid may overshoot.
-\end{KR}
+
 
 \begin{example2}{Ex.\ (s27/28) Loop to kernel}
     Rewrite \texttt{for(i<4096) c[i]=a[i]+b[i];} as a kernel; what replaces the loop?
      \\ \solution{Solution: }
     See the code box: \texttt{i=get\_global\_id(0); c[i]=a[i]+b[i];}. The \important{index space} (NDRange of 4096) replaces the loop one work-item per element.
 \end{example2}
+
+\multend
 
 \subsection{Block \& Grid Organisation}
 
@@ -313,7 +317,7 @@ __kernel void vadd(__global float* a,
 \begin{example2}{Exam FS23 Q4.5 GPU kernel (6P)}
     Outline a commented GPU kernel for the dot product of every row-vector pair.
      \\ \solution{Solution: }
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 // one thread per output cell (i,j)
 __global__ void dot(const int* in, int* out, int N){
   int j = blockIdx.x*blockDim.x + threadIdx.x; // column

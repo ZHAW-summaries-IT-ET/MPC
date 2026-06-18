@@ -21,7 +21,7 @@
     \end{itemize}
 \end{definition}
 
-\multend
+
 
 \begin{KR}{Recipe: Map Platform $\to$ Terminology}
     \paragraph{Find the host} which side delegates work.
@@ -29,11 +29,15 @@
     \paragraph{Identify UEs} each spawned process/thread; a \emph{task} is one work slice it runs.
 \end{KR}
 
+\multend
+
 \begin{example2}{Ex.\ CB1 / Jetson terminology}
     Programming on the CB1, delegating to the Jetson Nano. Map the platform; and what are the two meanings of ``task''?
      \\ \solution{Solution: }
     CB1 = \important{Host}; Nano = \important{Device}; Nano SMs = CUs; CUDA cores = PEs; ALU/FPU = FU; spawned threads = UEs. ``Task'' = a process/thread (Linux) \emph{or} a piece of parallel work (here, one Sobel slice).
 \end{example2}
+
+
 
 \subsection{General Solutions (Algorithm Structure)}
 
@@ -50,6 +54,7 @@
     \end{itemize}
 \end{concept}
 
+
 \begin{KR}{Recipe: Choose an Algorithm-Structure Pattern}
     \paragraph{Organising principle} what dominates tasks, data, or data-flow?
     \paragraph{Structure} linear/array or recursive?
@@ -61,6 +66,8 @@
      \\ \solution{Solution: }
     (a) Organise by \important{data}, array $\Rightarrow$ \important{Geometric Decomposition}. (b) Organise by \important{task}, recursive $\Rightarrow$ \important{Divide \& Conquer}.
 \end{example2}
+
+
 
 \subsection{Top-Down Pattern Path}
 
@@ -114,6 +121,8 @@
     $|G|=\sqrt{G_x^2+G_y^2}\to|G_x|+|G_y|$
 \end{formula}
 
+\mult{2}
+
 \begin{KR}{Recipe: Task-Decompose an Algorithm}
     \paragraph{Draw the CFG} nodes = functions, edges = data deps.
     \paragraph{Count distinct actions} = functional tasks.
@@ -127,6 +136,8 @@
      \\ \solution{Solution: }
     6 functional tasks; \important{6} distinct actions; only \texttt{sobel\_x},\texttt{sobel\_y} independent. Functional split = limited (2-way); \important{loop/region splitting} scales to all cores.
 \end{example2}
+
+\multend
 
 \subsection{CFG vs Call Graph}
 

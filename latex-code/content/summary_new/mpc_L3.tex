@@ -23,6 +23,8 @@
 
 \multend
 
+\mult{2}
+
 \begin{KR}{Recipe: Build a Parallel Region}
     \paragraph{Open a team} \texttt{\#pragma omp parallel} \{ \ldots \}.
     \paragraph{Share work} add \texttt{omp for} (else every thread repeats the block).
@@ -34,6 +36,8 @@
      \\ \solution{Solution: }
     \important{Runtime library}, \important{compiler directives}, \important{environment variables}. At the region's end there is an \important{implicit barrier} all threads join before the master continues.
 \end{example2}
+
+\multend
 
 \subsection{Data Scope \& Worksharing}
 
@@ -57,6 +61,8 @@
 
 \multend
 
+
+
 \begin{KR}{Recipe: Predict OpenMP Behaviour}
     \paragraph{Read directives} replicate vs worksharing.
     \paragraph{Scope each var} shared / private / reduction.
@@ -64,8 +70,10 @@
     \paragraph{Count} multiply by thread count only in replicated regions.
 \end{KR}
 
+\mult{2}
+
 \begin{example2}{Ex.\ LZ2a (s7) How many prints?}
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 #pragma omp parallel              // (A)
 for (int i=0;i<n;i++) printf("Hi\n");
 #pragma omp parallel
@@ -77,8 +85,10 @@ for (int i=0;i<n;i++) printf("Hi\n");
     (A) \important{$T\times5$} (loop replicated on every thread); (B) \important{$5$} (iterations shared once). \texttt{parallel} makes threads; \texttt{for} splits work.
 \end{example2}
 
+
+
 \begin{example2}{Ex.\ LZ2b (s8) Value of \texttt{b}?}
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 int a=7,b=0,n=10;
 #pragma omp parallel for shared(a,b)
 for(int i=0;i<n;i++) b=a+i;        // section 1
@@ -89,15 +99,18 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
     S1 \texttt{shared}: \important{race} $\to$ any of $7..16$. S2 \texttt{private}: copies discarded $\to$ global \texttt{b} unchanged. Final \texttt{b} = whatever S1 left.
 \end{example2}
 
+\multend
+
 \begin{example2}{Ex.\ LZ2c (s9) Reduction}
     Sum \texttt{a[0..8]} with no race; how does \texttt{reduction} work?
      \\ \solution{Solution: }
     \texttt{\#pragma omp parallel for reduction(+:sum)}: each thread builds a \important{private partial} (e.g.\ \texttt{a[0..2]}, \texttt{a[3..5]}, \texttt{a[6..8]}); after the join OpenMP adds the partials.
 \end{example2}
 
-\subsection{IPC Synchronisation (Critical Sections)}
+\raggedcolumns
+\columnbreak
 
-\mult{2}
+\subsection{IPC Synchronisation (Critical Sections)}
 
 \begin{definition}{Critical Section}
     Code only one thread may enter at a time (serialised). Entry must be uninterruptable (\texttt{lock()}); careless use $\to$ deadlock/livelock.
@@ -111,8 +124,6 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
         \item \texttt{omp\_*\_lock} (expensive)
     \end{itemize}
 \end{concept}
-
-\multend
 
 \begin{KR}{Recipe: Pick a Sync Primitive}
     single memory op $\to$ \texttt{atomic}; a block $\to$ \texttt{critical}; accumulate $\to$ \texttt{reduction}; processes $\to$ semaphore; threads $\to$ mutex; reusable handle $\to$ omp lock.
@@ -195,6 +206,9 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
     \important{\texttt{dynamic}} (or \texttt{guided}) threads grab work as they finish, balancing the uneven load. \texttt{static} would leave fast threads idle.
 \end{example2}
 
+\raggedcolumns
+\columnbreak
+
 \subsection{Runtime Interface}
 
 \begin{definition}{Thread-Count Precedence}
@@ -231,7 +245,7 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
 \begin{example2}{Exam FS23 Q4.2 Single-core C (6P)}
     Outline commented C for a single-core CPU with standard ALU.
      \\ \solution{Solution: }
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 // dot product of every row-vector pair, NxN -> NxN (N=4)
 for (int i = 0; i < N; i++) {        // first vector (row i)
   for (int j = 0; j < N; j++) {      // second vector (row j)
@@ -247,7 +261,7 @@ for (int i = 0; i < N; i++) {        // first vector (row i)
 \begin{example2}{Exam FS23 Q4.3 OpenMP version (3P)}
     Enhance the code for a 4-core machine using OpenMP directives.
      \\ \solution{Solution: }
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 // split the pair-loops across 4 cores
 #pragma omp parallel for collapse(2) schedule(static)
 for (int i = 0; i < N; i++)

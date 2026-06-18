@@ -1,12 +1,18 @@
 \section{L9 MPI (Message Passing Interface)}
 
-\subsection{Distributed Architectures}
+\subsubsection{Distributed Architectures}
 
 \mult{2}
 
 \begin{definition}{Protocols (rising complexity)}
     single var/record $\to$ memory-range $\to$ scatter-gather $\to$ RPC $\to$ distributed objects.
 \end{definition}
+
+\begin{example2}{Ex.\ Struct across machines}
+    You send a C struct from a big-endian to a little-endian node. What must you handle?
+     \\ \solution{Solution: }
+    \important{Endianness} conversion, a defined \important{wire format} (the interface), and channel \important{reliability}. (MPI derived datatypes help with the format.)
+\end{example2}
 
 \begin{definition}{Common Problems}
     \begin{itemize}
@@ -16,21 +22,22 @@
     \end{itemize}
 \end{definition}
 
-\multend
-
 \begin{KR}{Recipe: Spot the Distributed-Comms Issues}
     match the protocol to the data shape; \emph{always} handle endianness, a defined wire format, and channel reliability.
 \end{KR}
 
-\begin{example2}{Ex.\ Struct across machines}
-    You send a C struct from a big-endian to a little-endian node. What must you handle?
-     \\ \solution{Solution: }
-    \important{Endianness} conversion, a defined \important{wire format} (the interface), and channel \important{reliability}. (MPI derived datatypes help with the format.)
-\end{example2}
 
-\subsection{The Six Fundamental Operations}
 
-\mult{2}
+\multend
+
+
+
+
+
+\subsubsection{The Six Fundamental Operations}
+
+
+    \begin{minipage}{0.4\linewidth}
 
 \begin{definition}{The Six}
     \begin{itemize}
@@ -46,7 +53,8 @@
     C / C++ / Fortran. Build with \texttt{mpicc}, run with \texttt{mpirun}.
 \end{concept}
 
-\multend
+\end{minipage}
+    \begin{minipage}{0.59\linewidth}
 
 \begin{KR}{Recipe: Skeleton of an MPI Program}
     \texttt{Init} $\to$ \texttt{Comm\_size}/\texttt{Comm\_rank} $\to$ branch by rank $\to$ \texttt{Send}/\texttt{Recv} or collectives $\to$ \texttt{Finalize}.
@@ -55,6 +63,8 @@
         \item each rank computes its slice; collect with \texttt{Gather} / combine with \texttt{Reduce}
     \end{itemize}
 \end{KR}
+
+\end{minipage}
 
 \begin{example2}{Ex.\ Name the six}
     List the six fundamental MPI operations and what each does.
@@ -92,7 +102,7 @@
     A \important{communicator} groups processes (\texttt{MPI\_COMM\_WORLD}); a \important{rank} is a process's index. Use a \important{collective} for group-wide data movement (broadcast/scatter/gather/reduce); point-to-point for pairwise messages.
 \end{example2}
 
-\subsection{The Run-time}
+\subsubsection{The Run-time}
 
 \mult{2}
 
@@ -124,7 +134,9 @@
     \texttt{mpicc -o prog prog.c}; \texttt{mpirun -n 4 ./prog}. \important{Oversubscribing} (more processes than cores) \important{degrades IPC} tell \texttt{mpirun} the slot count.
 \end{example2}
 
-\subsection{Blocking vs Non-blocking}
+\subsubsection{Blocking vs Non-blocking}
+
+\mult{2}
 
 \begin{definition}{Blocking vs Non-blocking}
     \begin{itemize}
@@ -138,13 +150,15 @@
     simple / need the buffer reusable now $\to$ blocking. Want to \emph{overlap} comms with compute $\to$ non-blocking (post \texttt{Isend}/\texttt{Irecv}, compute, then \texttt{Wait}).
 \end{KR}
 
+\multend
+
 \begin{example2}{Ex.\ Why non-blocking?}
     When would you choose non-blocking communication?
      \\ \solution{Solution: }
     To \important{overlap communication with computation}: post \texttt{Isend}/\texttt{Irecv}, do useful work, then \texttt{Wait} hiding transfer latency.
 \end{example2}
 
-\subsection{The Four Blocking Send Modes}
+\paragraph{The Four Blocking Send Modes}
 
 \mult{2}
 
@@ -174,7 +188,7 @@
     \important{Synchronous} (\texttt{Ssend}) is safest (handshake). \important{Ready} (\texttt{Rsend}) has the lowest overhead but the \important{receive must already be posted}.
 \end{example2}
 
-\subsection{Non-blocking Send/Recv}
+\paragraph{Non-blocking Send/Recv}
 
 \begin{definition}{Isend / Irecv}
     Return a \emph{request} immediately.
@@ -194,7 +208,10 @@
     Check the request: \important{\texttt{MPI\_Wait}} (blocks until complete) or \important{\texttt{MPI\_Test}} (polls). Don't reuse the buffer before it completes.
 \end{example2}
 
-\subsection{Message Structure \& Data Types}
+\raggedcolumns
+\columnbreak
+
+\subsubsection{Message Structure \& Data Types}
 
 \mult{2}
 
@@ -222,7 +239,7 @@
     \important{Envelope} (dst/src, tag, comm) + \important{body} (buf, count, datatype). For a struct, build a \important{derived datatype} with \texttt{MPI\_Type\_create\_struct}.
 \end{example2}
 
-\subsection{Collectives}
+\paragraph{Collectives}
 
 \mult{2}
 
@@ -249,7 +266,7 @@
     \important{Bcast} the matrix (all need it) or \texttt{Scatter} if each rank only needs its rows then \important{Gather} the results to the root.
 \end{example2}
 
-\subsection{Reduction}
+\paragraph{Reduction}
 
 \begin{definition}{MPI\_Reduce}
     \texttt{MPI\_Reduce(send, recv, count, type, op, root, comm)} combines a value from every rank with an op (\texttt{SUM}/\texttt{MAX}/\texttt{MIN}/\texttt{PROD}\ldots), element-wise on arrays. \texttt{Allreduce} $\to$ result to all.
@@ -269,12 +286,14 @@
     \important{Cross-lecture threads:} Reduction OpenMP(L3)$\leftrightarrow$accumulate(L1-2)$\leftrightarrow$\texttt{MPI\_Reduce}(L9) $\cdot$ SPMD pattern(L2)$\leftarrow$SIMD/SIMT(L4)$\to$MPI(L9)$\to$CUDA/OpenCL(L8) $\cdot$ Scheduling L1$\to$L3$\to$L5$\to$L8 $\cdot$ Affinity MQMS(L5)$\leftrightarrow$ASID(L6)$\leftrightarrow$\texttt{--cpu-set}(L9) $\cdot$ Amdahl(L5) caps all.
 \end{remark}
 
-\subsection{Exam FS23 Q4.6: MPI}
+\raggedcolumns
+\columnbreak
+
 
 \begin{example2}{Exam FS23 Q4.6 MPI directives (2P)}
     Farm the $220\times220$ calculation to 200 four-core machines write the MPI directives for the CPU code.
      \\ \solution{Solution: }
-\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+\begin{lstlisting}[language=C, style=basesmol]
 MPI_Init(&argc, &argv);
 MPI_Comm_size(MPI_COMM_WORLD, &size);
 MPI_Comm_rank(MPI_COMM_WORLD, &rank);

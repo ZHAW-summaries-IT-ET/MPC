@@ -224,6 +224,9 @@
     Only a superscalar core has \important{multiple issue slots/pipelines} per cycle to give the 2nd thread; a scalar core has nothing spare. Speedup $\sim$\important{30\%} (more about cache stalls than FU availability).
 \end{example2}
 
+\raggedcolumns
+\columnbreak
+
 \subsection{AMP Scenarios}
 
 \mult{2}
@@ -283,7 +286,10 @@
 
 \multend
 
-\paragraph{Exam FS23 Q2: Architectures (RZ/V2L)}
+\raggedcolumns
+\columnbreak
+
+\subsection{Exam FS23 Q2: Architectures (RZ/V2L)}
 
 \begin{concept}{Scenario (appendix)}
     RZ/V2L: Cortex-A55 (1.2\,GHz) + Cortex-M33 (200\,MHz). L1 I/D = 32\,KB each (split), L2 = 0\,KB, L3 = 256\,KB shared; ARMv8.2-A; NEON/FPU; no MMU mentioned; openAMP links A55$\leftrightarrow$M33.

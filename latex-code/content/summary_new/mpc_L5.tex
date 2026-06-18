@@ -1,17 +1,5 @@
 \section{L5 Operating Systems}
 
-\begin{concept}{Lernziele (Learning Goals)}
-    \begin{enumerate}
-        \item Explain the \textbf{process concept} and its ramifications on the OS [s6]
-        \item Explain \textbf{multiprocessor scheduling \& load balancing} (SQMS/MQMS/work-stealing, cache affinity) [s3--5/9]
-        \item Explain the \textbf{three RT schedulers} (FIFO / RR / DEADLINE) [s7]
-        \item Explain the \textbf{three scheduler categories} (RT / fair / low) [s8]
-        \item Use \textbf{Amdahl's Law} to predict speed-up [s10]
-        \item Explain \textbf{critical sections} \& synchronisation [s11]
-        \item Explain \textbf{TAS vs TTAS} [s12--13]
-    \end{enumerate}
-\end{concept}
-
 \subsection{LZ1 The Process Concept}
 
 \mult{2}
@@ -42,7 +30,7 @@
 
 \begin{example2}{Ex.\ LZ1 Why an MPU and a scheduler?}
     What does the OS need to support processes, and what are the two policy classes?
-    \tcblower
+     \\ \solution{Solution: }
     The \important{MPU} enforces resource separation (isolation); the \important{scheduler} time-shares + load-balances. Policies = \important{RT} and \important{normal}.
 \end{example2}
 
@@ -72,7 +60,7 @@
 
 \begin{example2}{Ex.\ LZ2 Imbalanced MQMS}
     CPU0 runs heavy task A while B and D share CPU1; then A finishes. What's the problem and the fix?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Load imbalance}: CPU0 goes idle while B/D still cramped on CPU1. Fix with \important{migration} (move B or D over) or \important{work-stealing} (idle CPU0 takes from CPU1's queue).
 \end{example2}
 
@@ -92,7 +80,7 @@
 
 \begin{example2}{Ex.\ LZ3 FIFO or RR?}
     Two equal-priority RT threads must share the CPU fairly. Which scheduler?
-    \tcblower
+     \\ \solution{Solution: }
     \important{\texttt{SCHED\_RR}} time-slices equal-priority threads. \texttt{FIFO} would let the first run to completion before the second starts.
 \end{example2}
 
@@ -123,7 +111,7 @@
 
 \begin{example2}{Ex.\ LZ4 Which category?}
     Which scheduler maintains fairness using a self-balancing red-black tree and the \texttt{nice} value? What is its design goal?
-    \tcblower
+     \\ \solution{Solution: }
     \important{\texttt{SCHED\_OTHER}} (EEVDF/CFS) goal is resource \important{utilisation} (offloading busy CPUs to idle ones).
 \end{example2}
 
@@ -142,7 +130,7 @@
 
 \begin{example2}{Ex.\ LZ5 Worked}
     $p=0.9$ on 8 cores: speed-up? maximum? why might you not reach it?
-    \tcblower
+     \\ \solution{Solution: }
     $S(8)=\tfrac{1}{0.1+0.9/8}=\tfrac{1}{0.2125}\approx{}$ \important{$4.7\times$}; $S_{\max}=\tfrac{1}{0.1}={}$ \important{$10\times$}. Not reached due to \important{cache-coherence} traffic + \important{synchronisation} overhead.
 \end{example2}
 
@@ -172,7 +160,7 @@
 
 \begin{example2}{Ex.\ LZ6 Protect a shared balance}
     Two processes update a shared bank balance. What is the protected region called? Give a blocking and a spinning way.
-    \tcblower
+     \\ \solution{Solution: }
     A \important{critical section}. Blocking: OS \important{mutex/semaphore} (thread blocks). Spinning: \important{Peterson/spinlock} or an ISA atomic (busy-wait).
 \end{example2}
 
@@ -197,7 +185,7 @@ do {
 
 \begin{example2}{Ex.\ LZ7 Why TTAS?}
     Why is TTAS faster than TAS under contention?
-    \tcblower
+     \\ \solution{Solution: }
     TAS spins with atomic \emph{writes} $\to$ each attempt locks the bus + invalidates the line. TTAS spins on a cached \emph{read}, writing only when free $\to$ \important{far less bus/coherence traffic}.
 \end{example2}
 
@@ -209,6 +197,6 @@ do {
 
 \begin{example2}{Exam FS23 Q3.4 Scheduler on the cores (6P)}
     Sobel, 4-core SMP, at least 6 chunks, streamed images. Choose a scheduler; state assumptions.
-    \tcblower
+     \\ \solution{Solution: }
     \important{Assumptions}: equal chunk size, CPU-bound, soft-real-time stream. 6 chunks on 4 cores $\Rightarrow$ uneven last round, so use \important{dynamic} load balancing (or make \#chunks a multiple of 4). For a per-frame deadline use an \important{RT} policy (\texttt{SCHED\_FIFO}/\texttt{RR}) with threads \emph{pinned} to cores (affinity); otherwise \texttt{SCHED\_OTHER} suffices. Coherence: chunk count $>$ cores enables the balancing.
 \end{example2}

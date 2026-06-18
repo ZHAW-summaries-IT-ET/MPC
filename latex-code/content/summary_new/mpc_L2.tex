@@ -1,15 +1,5 @@
 \section{L2 Data Decomposition}
 
-\begin{concept}{Lernziele (Learning Goals)}
-    \begin{enumerate}
-        \item Know and explain the \textbf{general solutions} (Algorithm-Structure tree: organise by task vs data) [S4]
-        \item Explain \textbf{why we took this path} justify each pattern choice top-down (Data Decomposition $\to$ \ldots $\to$ SPMD) [S5/9/11/17/28]
-        \item Understand the \textbf{granularity} knob and its impact (boundary cells, volume scaling, overhead) [S7]
-        \item Explain \textbf{efficiency}: work vs overhead, and how chunks map onto UEs [S7]
-        \item Describe the \textbf{communication-of-indices} issue (global vs local indices; locality) [S23]
-    \end{enumerate}
-\end{concept}
-
 \subsection{LZ1 General Solutions (Algorithm Structure)}
 
 \begin{concept}{Algorithm-Structure Decision Tree}
@@ -29,7 +19,7 @@
 
 \begin{example2}{Ex.\ LZ1 Pick the general solution}
     A streamed $1024\times1024$ greyscale image, same filter applied per pixel. Which general solution, and why not task parallelism?
-    \tcblower
+     \\ \solution{Solution: }
     Organise by \important{data}, array structure $\Rightarrow$ \important{Geometric Decomposition}. Task parallelism gives only a handful of functional tasks; the data view scales with the number of image regions.
 \end{example2}
 
@@ -64,7 +54,7 @@
 
 \begin{example2}{Ex.\ LZ2 Justify the path for Sobel}
     Walk the top-down path and justify each pattern choice.
-    \tcblower
+     \\ \solution{Solution: }
     \important{Data Decomposition} (image is a big array, op is per-region); \important{Dependency Analysis} (grey = read-only, only a 1-px ghost halo shared); \important{Geometric Decomposition} (local $3\times3$ stencil); \important{Loop Parallelism} (split the pixel loops); \important{Distributed Array} (hand chunks to UEs); \important{SPMD} (each UE runs the same code, indexed by rank).
 \end{example2}
 
@@ -101,7 +91,7 @@
 
 \begin{example2}{Ex.\ LZ3 Estimate the overhead}
     $1024\times1024$ image in $1024\times128$ strips. Estimate communication vs computation.
-    \tcblower
+     \\ \solution{Solution: }
     Compute $\approx 1024\cdot128 = 131072$\,px (volume); ghost $\approx 2\times1024 = 2048$\,px (surface) $\Rightarrow$ comm/compute $\approx$ \important{1.6\%} overhead negligible, so this granularity is fine.
 \end{example2}
 
@@ -127,7 +117,7 @@
 
 \begin{example2}{Ex.\ LZ4 Map 6 chunks to 4 UEs}
     How do you map 6 chunks onto 4 UEs for good load balance?
-    \tcblower
+     \\ \solution{Solution: }
     Over-decompose (6 $>$ 4) so a UE that finishes early takes the next chunk; assign round-robin or via a \important{dynamic queue}; pin UEs for cache affinity. Equal chunks divisible by UEs $\Rightarrow$ static is cheaper.
 \end{example2}
 
@@ -149,7 +139,7 @@
 
 \begin{example2}{Ex.\ LZ5 Local vs global indices}
     A UE owns rows 128--255 of a 1024-row image. What index info does it need, and why does locality matter?
-    \tcblower
+     \\ \solution{Solution: }
     Its global \important{offset} (128): local row $r$ maps to global $r+128$. It also needs neighbour boundary rows (\important{127} and \important{256}) as ghosts. Processing its contiguous band keeps spatially-related data in cache (cache/memory locality).
 \end{example2}
 
@@ -161,18 +151,18 @@
 
 \begin{example2}{Exam FS23 Q3.1 Design pattern (1P)}
     Explain your choice of design pattern.
-    \tcblower
+     \\ \solution{Solution: }
     \important{Data decomposition}: the image is a large array and the same Sobel op applies independently to regions. Use more chunks than cores (\emph{quantum}) for \emph{load balancing}; respect the \emph{sequence of operations} (stream in $\to$ filter $\to$ out). State assumptions (greyscale, equal chunks).
 \end{example2}
 
 \begin{example2}{Exam FS23 Q3.2 Dimension the chunks (4P)}
     Draw the chunks, dimension them in pixels, explain the dimensioning.
-    \tcblower
+     \\ \solution{Solution: }
     E.g.\ \important{8 horizontal strips of $1024\times128$\,px}: $\geq6$ chunks and $>4$ cores $\Rightarrow$ load balancing; $1024$ divides evenly; row-major friendly (contiguous, simple ghost rows). (Square $512\times256$ tiles also valid lower surface/volume.)
 \end{example2}
 
 \begin{example2}{Exam FS23 Q3.5 Ghost cells / cost / loop indices (7P)}
     What is a ghost cell? Estimate computation vs communication for your chunk size. What are the loop indices?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Ghost cell} = a boundary cell required by two chunks (a 1-row/col halo for the $3\times3$ kernel). For a $1024\times128$ strip: compute $\approx 1024\cdot128 = 131072$\,px $\times\sim4$ MACs (for $G_x$/$G_y$); ghost $\approx 2\times1024 = 2048$\,px $\Rightarrow$ comm/compute $\approx 1.6\%$ (\emph{surface} vs \emph{volume}). Loops run over the interior with a 1-px border: \texttt{for y=1..H} \texttt{for x=1..W}, reading neighbours $x\!-\!1..x\!+\!1$, $y\!-\!1..y\!+\!1$.
 \end{example2}

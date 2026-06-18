@@ -1,16 +1,4 @@
-\section{L1 Introduction \& Task Decomposition}
-
-\begin{concept}{Lernziele (Learning Goals)}
-    \begin{enumerate}
-        \item Know and explain the \textbf{terms} (host/device/CU/PE/FU/UE; dual meaning of ``task'') [S12]
-        \item Know and explain the \textbf{general solutions} Algorithm-Structure patterns (organise by task vs data) [S22/25]
-        \item Trace the \textbf{top-down path} through the four pattern layers (Sobel) [S23]
-        \item Know how to apply the \textbf{task-decomposition} pattern (functional vs loop splitting) [S26]
-        \item Explain the difference between a \textbf{CFG and a call graph} [S29]
-        \item Explain the \textbf{task-parallelism dependency} terms (embarrassingly parallel; order; removable/separable) [S35]
-        \item Explain the \textbf{scheduling} terms (static, dynamic, task queue, work-stealing) [S36]
-    \end{enumerate}
-\end{concept}
+\section{L1 Introduction \& Task Decomposition}s
 
 \subsection{LZ1 Vocabulary \& Platform Model}
 
@@ -43,7 +31,7 @@
 
 \begin{example2}{Ex.\ LZ1 CB1 / Jetson terminology}
     Programming on the CB1, delegating to the Jetson Nano. Map the platform; and what are the two meanings of ``task''?
-    \tcblower
+     \\ \solution{Solution: }
     CB1 = \important{Host}; Nano = \important{Device}; Nano SMs = CUs; CUDA cores = PEs; ALU/FPU = FU; spawned threads = UEs. ``Task'' = a process/thread (Linux) \emph{or} a piece of parallel work (here, one Sobel slice).
 \end{example2}
 
@@ -70,7 +58,7 @@
 
 \begin{example2}{Ex.\ LZ2 Pick the pattern}
     (a) Sobel applies the same kernel to every image region. (b) Quicksort recursively splits an array. Which Algorithm-Structure pattern each?
-    \tcblower
+     \\ \solution{Solution: }
     (a) Organise by \important{data}, array $\Rightarrow$ \important{Geometric Decomposition}. (b) Organise by \important{task}, recursive $\Rightarrow$ \important{Divide \& Conquer}.
 \end{example2}
 
@@ -91,7 +79,7 @@
 
 \begin{example2}{Ex.\ LZ3 Trace Sobel through the layers}
     Name the chosen pattern at each of the four layers for Sobel.
-    \tcblower
+     \\ \solution{Solution: }
     Finding Concurrency: \important{task decomposition + dependency analysis}; Algorithm Structure: \important{task parallelism} (and geometric decomposition for the data view); Supporting Structure: \important{fork/join}; Implementation: \important{processes \& threads}.
 \end{example2}
 
@@ -136,7 +124,7 @@
 
 \begin{example2}{Ex.\ LZ4 Decompose Sobel}
     Split Sobel into tasks. How many distinct actions? Independent tasks? Functional or loop splitting?
-    \tcblower
+     \\ \solution{Solution: }
     6 functional tasks; \important{6} distinct actions; only \texttt{sobel\_x},\texttt{sobel\_y} independent. Functional split = limited (2-way); \important{loop/region splitting} scales to all cores.
 \end{example2}
 
@@ -155,7 +143,7 @@
 
 \begin{example2}{Ex.\ LZ5 Which graph?}
     (a) A profiler reports which functions actually called which, and how often. (b) A diagram of every branch the program could take. Which is which?
-    \tcblower
+     \\ \solution{Solution: }
     (a) \important{Call graph} (actual, dynamic, profiler). (b) \important{CFG} (all possible paths, static).
 \end{example2}
 
@@ -183,7 +171,7 @@
 
 \begin{example2}{Ex.\ Dependency analysis for Sobel}
     Which sub-pattern matters most? Group/order/share for Sobel?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Data Sharing}. Group \texttt{sobel\_x/y} (same grey input); order \texttt{sobel\_all} after both; grey = read-only, kernel = effectively-local, \texttt{Gx/Gy} = read-write, \texttt{sobel\_all} = \important{accumulate}.
 \end{example2}
 
@@ -209,7 +197,7 @@
 
 \begin{example2}{Ex.\ LZ6 Classify the dependencies}
     Tasks all add into one shared \texttt{sum}. What dependency is this, and how do you parallelise it?
-    \tcblower
+     \\ \solution{Solution: }
     A \important{data dependency} on \texttt{sum}. It is \important{separable}: give each UE a private partial sum (replicated data), then combine i.e.\ a \emph{reduction}. (By contrast \texttt{sobel\_x}$\parallel$\texttt{sobel\_y} are embarrassingly parallel; \texttt{sobel\_all} has an \emph{order} dependency on both.)
 \end{example2}
 
@@ -241,7 +229,7 @@
 
 \begin{example2}{Ex.\ LZ7 Pick a schedule}
     6 equal Sobel chunks on 4 cores. Static or dynamic? Why?
-    \tcblower
+     \\ \solution{Solution: }
     6 on 4 leaves an uneven last round, so prefer \important{dynamic} (or make \#chunks a multiple of 4). If chunks are truly equal \emph{and} divide the cores, \emph{static} wins on low overhead. \emph{Work-stealing} helps if some chunks run long.
 \end{example2}
 
@@ -264,7 +252,7 @@
 
 \begin{example2}{Ex.\ Fork-join \& process vs thread}
     Is fork-join a good fit for Sobel? Process or thread for the workers?
-    \tcblower
+     \\ \solution{Solution: }
     Fork-join is a \important{poor fit} for a fixed pipeline (it suits irregular/recursive work). Use \important{threads}: they share the image memory (cheap comms) and are cheap to create vs processes.
 \end{example2}
 
@@ -280,7 +268,7 @@
 
 \begin{example2}{Exam FS23 Q3.3 Choice of UE (5P)}
     Sobel on $1024\times1024$ streamed images, 4-core SMP Linux, at least 6 chunks. Explain your UE choice cost of UE, IPC cost, cost of distributing chunks to UEs, cost of distributing UEs to cores.
-    \tcblower
+     \\ \solution{Solution: }
     Choose \important{threads}: cheap to create vs a process (1P); IPC via shared memory is cheap image already in one address space (1P); chunks distributed as pointers/offsets, near-zero cost (1P); pin threads to cores (affinity) for UE$\to$core mapping (1P); structured reasoning throughout (1P).
 \end{example2}
 

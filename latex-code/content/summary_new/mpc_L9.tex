@@ -1,20 +1,5 @@
 \section{L9 MPI (Message Passing Interface)}
 
-\begin{concept}{Lernziele (Learning Goals)}
-    \begin{enumerate}
-        \item \textbf{Distributed architectures} protocols + common problems [s6]
-        \item The \textbf{six fundamental MPI operations} [s7--8]
-        \item \textbf{Communication models} (communicator/rank, P2P vs collective) [s9]
-        \item The \textbf{run-time} (compile/run, SPMD/MIMD, binding) [s10--13]
-        \item \textbf{Blocking vs non-blocking} [s14]
-        \item The \textbf{four blocking send modes} [s15--16]
-        \item \textbf{Non-blocking} send/recv (Wait/Test) [s17]
-        \item \textbf{Message structure} + data types (+ derived) [s18--19]
-        \item \textbf{Collectives} (Bcast / Scatter / Gather) [s20]
-        \item \textbf{Reduction} (\texttt{MPI\_Reduce}) [s21]
-    \end{enumerate}
-\end{concept}
-
 \subsection{LZ1 Distributed Architectures}
 
 \mult{2}
@@ -39,7 +24,7 @@
 
 \begin{example2}{Ex.\ LZ1 Struct across machines}
     You send a C struct from a big-endian to a little-endian node. What must you handle?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Endianness} conversion, a defined \important{wire format} (the interface), and channel \important{reliability}. (MPI derived datatypes help with the format.)
 \end{example2}
 
@@ -73,7 +58,7 @@
 
 \begin{example2}{Ex.\ LZ2 Name the six}
     List the six fundamental MPI operations and what each does.
-    \tcblower
+     \\ \solution{Solution: }
     \important{Init} (start), \important{Comm\_size} (\#procs), \important{Comm\_rank} (my rank), \important{Send}, \important{Recv}, \important{Finalize} (exit).
 \end{example2}
 
@@ -103,7 +88,7 @@
 
 \begin{example2}{Ex.\ LZ3 Communicator / rank}
     What is a communicator and a rank? When do you use a collective over point-to-point?
-    \tcblower
+     \\ \solution{Solution: }
     A \important{communicator} groups processes (\texttt{MPI\_COMM\_WORLD}); a \important{rank} is a process's index. Use a \important{collective} for group-wide data movement (broadcast/scatter/gather/reduce); point-to-point for pairwise messages.
 \end{example2}
 
@@ -135,7 +120,7 @@
 
 \begin{example2}{Ex.\ LZ4 Build / run / oversubscribe}
     How do you build and run an MPI program on 4 cores? What does oversubscribing do?
-    \tcblower
+     \\ \solution{Solution: }
     \texttt{mpicc -o prog prog.c}; \texttt{mpirun -n 4 ./prog}. \important{Oversubscribing} (more processes than cores) \important{degrades IPC} tell \texttt{mpirun} the slot count.
 \end{example2}
 
@@ -155,7 +140,7 @@
 
 \begin{example2}{Ex.\ LZ5 Why non-blocking?}
     When would you choose non-blocking communication?
-    \tcblower
+     \\ \solution{Solution: }
     To \important{overlap communication with computation}: post \texttt{Isend}/\texttt{Irecv}, do useful work, then \texttt{Wait} hiding transfer latency.
 \end{example2}
 
@@ -185,7 +170,7 @@
 
 \begin{example2}{Ex.\ LZ6 Safest vs cheapest}
     Which blocking send mode is safest, and which has the lowest overhead (and its precondition)?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Synchronous} (\texttt{Ssend}) is safest (handshake). \important{Ready} (\texttt{Rsend}) has the lowest overhead but the \important{receive must already be posted}.
 \end{example2}
 
@@ -205,7 +190,7 @@
 
 \begin{example2}{Ex.\ LZ7 Did it finish?}
     After an \texttt{MPI\_Isend}, how do you know the transfer is done?
-    \tcblower
+     \\ \solution{Solution: }
     Check the request: \important{\texttt{MPI\_Wait}} (blocks until complete) or \important{\texttt{MPI\_Test}} (polls). Don't reuse the buffer before it completes.
 \end{example2}
 
@@ -233,7 +218,7 @@
 
 \begin{example2}{Ex.\ LZ8 Two parts + a struct}
     What two parts make up an MPI message, and how do you send a C struct?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Envelope} (dst/src, tag, comm) + \important{body} (buf, count, datatype). For a struct, build a \important{derived datatype} with \texttt{MPI\_Type\_create\_struct}.
 \end{example2}
 
@@ -260,7 +245,7 @@
 
 \begin{example2}{Ex.\ LZ9 Distribute then collect}
     Give every rank the full matrix, then collect each rank's row-results. Which collectives?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Bcast} the matrix (all need it) or \texttt{Scatter} if each rank only needs its rows then \important{Gather} the results to the root.
 \end{example2}
 
@@ -276,7 +261,7 @@
 
 \begin{example2}{Ex.\ LZ10 Combine partial sums}
     Every rank computed a partial sum; produce the total at rank 0.
-    \tcblower
+     \\ \solution{Solution: }
     \important{\texttt{MPI\_Reduce(\&partial, \&total, 1, MPI\_INT, MPI\_SUM, 0, MPI\_COMM\_WORLD)}}. Use \texttt{Allreduce} if every rank needs the total.
 \end{example2}
 
@@ -288,7 +273,7 @@
 
 \begin{example2}{Exam FS23 Q4.6 MPI directives (2P)}
     Farm the $220\times220$ calculation to 200 four-core machines write the MPI directives for the CPU code.
-    \tcblower
+     \\ \solution{Solution: }
 \begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
 MPI_Init(&argc, &argv);
 MPI_Comm_size(MPI_COMM_WORLD, &size);

@@ -1,16 +1,5 @@
 \section{L4 SIMD (Flynn / NEON / MISD)}
 
-\begin{concept}{Lernziele (Learning Goals)}
-    \begin{enumerate}
-        \item Explain \textbf{Flynn's taxonomy} (SISD / SIMD / MISD / MIMD) [s4]
-        \item Explain the \textbf{SPMD} pattern the software abstraction of SIMD [s6--9]
-        \item Understand the \textbf{SIMD motivation}: DSP kernels all reduce to multiply-accumulate [s10]
-        \item Understand that \textbf{NEON is a vector-oriented MAC unit} (registers/lanes, no divide) [s17]
-        \item Understand \textbf{NEON intrinsics} data types, lanes, specific instructions [s18/19]
-        \item Understand \textbf{MISD / lockstep} (tight, software pendant, loose, real-world) [s21--24]
-    \end{enumerate}
-\end{concept}
-
 \subsection{LZ1 Flynn's Taxonomy}
 
 \mult{2}
@@ -37,7 +26,7 @@
 
 \begin{example2}{Ex.\ LZ1 Classify these}
     (a) a vector add of 4 lanes; (b) two CPUs running the same code lockstep; (c) a multicore server. Which Flynn class each? What is (a) abstracted to?
-    \tcblower
+     \\ \solution{Solution: }
     (a) \important{SIMD} abstracted to SIMT then SPMD; (b) \important{MISD} (dependability); (c) \important{MIMD}.
 \end{example2}
 
@@ -53,7 +42,7 @@
 
 \begin{example2}{Ex.\ LZ2 SPMD vs SIMD}
     Why is SPMD called the software cousin of SIMD?
-    \tcblower
+     \\ \solution{Solution: }
     Both run the \emph{same instructions/program} on \emph{different data}. SIMD does it in hardware lanes (lockstep); SPMD does it across UEs, each picking its data slice by \important{rank} it relaxes the strict lockstep.
 \end{example2}
 
@@ -69,7 +58,7 @@
 
 \begin{example2}{Ex.\ LZ3 Which vectorise?}
     FIR filter, dot product, linked-list traversal which suit SIMD and why?
-    \tcblower
+     \\ \solution{Solution: }
     \important{FIR} and \important{dot product} regular MAC over contiguous arrays. \important{Linked-list traversal} does not pointer chasing, no regular data parallelism.
 \end{example2}
 
@@ -111,7 +100,7 @@
 
 \begin{example2}{Ex.\ LZ4 Decode \texttt{VQADD.s16}}
     What does \texttt{VQADD.s16} do? And why is there no \texttt{VDIV}?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Saturating vector add} of signed 16-bit lanes (Q = saturate instead of wrap on overflow). No \texttt{VDIV}: NEON has \important{no divide} use a reciprocal estimate instead.
 \end{example2}
 
@@ -140,13 +129,13 @@
 
 \begin{example2}{Ex.\ LZ5 (s19) Decode intrinsics}
     What does \texttt{vmulq\_f64} do? How many lanes in \texttt{uint16x4\_t}? What does \texttt{vmul\_lane\_u16(a,b,L)} do?
-    \tcblower
+     \\ \solution{Solution: }
     \texttt{vmulq\_f64}: 128-bit lane-wise multiply of \important{2 doubles} $\to$ \texttt{float64x2\_t}. \texttt{uint16x4\_t}: \important{4 lanes}. \texttt{vmul\_lane}: broadcast \texttt{b[L]} to all lanes, multiply by \texttt{a}.
 \end{example2}
 
 \begin{example2}{Ex.\ LZ5 (s20) Lab: vectorise statistics}
     An IoT gateway aggregates a stream (mean, std, skew, kurtosis) to cut comms. Why vectorise, and what is the catch?
-    \tcblower
+     \\ \solution{Solution: }
     These reduce to repeated MAC over the samples $\to$ vectorise with NEON to finish quickly/efficiently. \important{Catch}: they need \emph{divisions} and \emph{floating point}, both expensive on NEON (no divide) compute incrementally and use reciprocal estimates.
 \end{example2}
 
@@ -175,7 +164,7 @@
 
 \begin{example2}{Ex.\ LZ6 ABS controller}
     An ABS unit runs two CPUs that execute the same code and compare every bus access, issuing a RESET on any difference. Flynn class? Purpose?
-    \tcblower
+     \\ \solution{Solution: }
     \important{MISD} (tightly-coupled lockstep). Purpose = \important{dependability}: detect a fault via the mismatch and fail safe (RESET), not to go faster.
 \end{example2}
 
@@ -183,7 +172,7 @@
 
 \begin{example2}{Exam FS23 Q2.4 NEON implementation (1P)}
     How is the NEON implemented (RZ/V2L, ARMv8)?
-    \tcblower
+     \\ \solution{Solution: }
     It's a \important{v8 architecture} NEON is integrated into the v8 pipeline (not a separate co-processor).
 \end{example2}
 
@@ -196,7 +185,7 @@
 
 \begin{example2}{Exam FS23 Q4.4 NEON dot product (6P)}
     Write commented (pseudo/intrinsic) NEON code for the dot product of each row-vector pair (reduced $4\times4$).
-    \tcblower
+     \\ \solution{Solution: }
 \begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
 // N=4 fits one int32x4 vector exactly
 for (int i = 0; i < N; i++)          // first vector

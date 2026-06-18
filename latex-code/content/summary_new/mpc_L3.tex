@@ -1,17 +1,5 @@
 \section{L3 OpenMP}
 
-\begin{concept}{Lernziele (Learning Goals)}
-    \emph{This deck labels no explicit Lernziele these are derived from its ``Session 1'' topic agenda.}
-    \begin{enumerate}
-        \item Explain \textbf{what OpenMP is} and its execution model (shared memory, Fork-Join + SPMD, implicit barrier) [s4--6]
-        \item \textbf{Data scope}: worksharing + variable scope + reduction; predict code behaviour [s7--9]
-        \item \textbf{IPC synchronisation}: critical sections (atomic / critical / semaphore / mutex / locks) [s10--15]
-        \item \textbf{Thread synchronisation}: barriers (implicit, \texttt{nowait}, \texttt{ordered}) [s16--20]
-        \item \textbf{Scheduling}: task management (master/single/sections) + loop schedules [s21--27]
-        \item \textbf{Runtime interface}: how the thread count is determined [s28--29]
-    \end{enumerate}
-\end{concept}
-
 \subsection{LZ1 Introduction \& Model}
 
 \mult{2}
@@ -43,7 +31,7 @@
 
 \begin{example2}{Ex.\ LZ1 Components \& barrier}
     Name the three components of OpenMP. What happens at the end of a parallel region?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Runtime library}, \important{compiler directives}, \important{environment variables}. At the region's end there is an \important{implicit barrier} all threads join before the master continues.
 \end{example2}
 
@@ -85,7 +73,7 @@ for (int i=0;i<n;i++) printf("Hi\n");
 for (int i=0;i<n;i++) printf("Hi\n");
 \end{lstlisting}
     With $T$ threads and $n=5$, how many lines each?
-    \tcblower
+     \\ \solution{Solution: }
     (A) \important{$T\times5$} (loop replicated on every thread); (B) \important{$5$} (iterations shared once). \texttt{parallel} makes threads; \texttt{for} splits work.
 \end{example2}
 
@@ -97,13 +85,13 @@ for(int i=0;i<n;i++) b=a+i;        // section 1
 #pragma omp parallel for shared(a) private(b)
 for(int i=0;i<n;i++) b=a+i;        // section 2
 \end{lstlisting}
-    \tcblower
+     \solution{Solution: }
     S1 \texttt{shared}: \important{race} $\to$ any of $7..16$. S2 \texttt{private}: copies discarded $\to$ global \texttt{b} unchanged. Final \texttt{b} = whatever S1 left.
 \end{example2}
 
 \begin{example2}{Ex.\ LZ2c (s9) Reduction}
     Sum \texttt{a[0..8]} with no race; how does \texttt{reduction} work?
-    \tcblower
+     \\ \solution{Solution: }
     \texttt{\#pragma omp parallel for reduction(+:sum)}: each thread builds a \important{private partial} (e.g.\ \texttt{a[0..2]}, \texttt{a[3..5]}, \texttt{a[6..8]}); after the join OpenMP adds the partials.
 \end{example2}
 
@@ -132,7 +120,7 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
 
 \begin{example2}{Ex.\ LZ3 Increment a shared counter}
     Give three ways to make \texttt{count++} safe across threads, and the cheapest.
-    \tcblower
+     \\ \solution{Solution: }
     \texttt{\#pragma omp atomic}, \texttt{\#pragma omp critical}, or a mutex/semaphore. \important{Cheapest = \texttt{atomic}} (uses a HW test-and-set; \texttt{critical}/locks are heavier).
 \end{example2}
 
@@ -164,7 +152,7 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
 
 \begin{example2}{Ex.\ LZ4 (s18) Barrier internals}
     On arrival, wait-queue or busy-loop which is preferable? Once released, who goes first?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Depends}: short wait + spare cores $\to$ busy-loop (spin); long/oversubscribed $\to$ wait-queue (block). Release order = \important{OS scheduler, nondeterministic}; use \texttt{ordered} if order matters.
 \end{example2}
 
@@ -197,13 +185,13 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
 
 \begin{example2}{Ex.\ LZ5a (s22) Effect of \texttt{nowait}}
     What does \texttt{nowait} do on \texttt{\#pragma omp single}?
-    \tcblower
+     \\ \solution{Solution: }
     \texttt{single} runs the block on one thread with an \emph{implicit barrier}. \texttt{nowait} \important{removes that barrier} $\to$ the other threads proceed to ``Do some calculations'' without waiting (safe only if no dependency).
 \end{example2}
 
 \begin{example2}{Ex.\ LZ5b Which schedule?}
     A 64-iteration loop on 4 threads where iteration cost varies widely. Which schedule?
-    \tcblower
+     \\ \solution{Solution: }
     \important{\texttt{dynamic}} (or \texttt{guided}) threads grab work as they finish, balancing the uneven load. \texttt{static} would leave fast threads idle.
 \end{example2}
 
@@ -219,7 +207,7 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
 
 \begin{example2}{Ex.\ LZ6 Who wins?}
     \texttt{OMP\_NUM\_THREADS=8}, but the region is \texttt{\#pragma omp parallel num\_threads(4)}. How many threads?
-    \tcblower
+     \\ \solution{Solution: }
     \important{4} \texttt{num\_threads} outranks the environment variable in the precedence list.
 \end{example2}
 
@@ -236,13 +224,13 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
 
 \begin{example2}{Exam FS23 Q4.1 MAC count (1P)}
     How many MAC operations in the reduced ($4\times4$) form?
-    \tcblower
+     \\ \solution{Solution: }
     \important{$4\times4 = 16$} (per the answer key the $4\times4$ output of dot products).
 \end{example2}
 
 \begin{example2}{Exam FS23 Q4.2 Single-core C (6P)}
     Outline commented C for a single-core CPU with standard ALU.
-    \tcblower
+     \\ \solution{Solution: }
 \begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
 // dot product of every row-vector pair, NxN -> NxN (N=4)
 for (int i = 0; i < N; i++) {        // first vector (row i)
@@ -258,7 +246,7 @@ for (int i = 0; i < N; i++) {        // first vector (row i)
 
 \begin{example2}{Exam FS23 Q4.3 OpenMP version (3P)}
     Enhance the code for a 4-core machine using OpenMP directives.
-    \tcblower
+     \\ \solution{Solution: }
 \begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
 // split the pair-loops across 4 cores
 #pragma omp parallel for collapse(2) schedule(static)

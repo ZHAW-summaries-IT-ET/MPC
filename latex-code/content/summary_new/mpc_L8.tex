@@ -1,22 +1,5 @@
 \section{L8 GPU Architectures / CUDA / OpenCL}
 
-\begin{concept}{Lernziele (Learning Goals)}
-    \begin{enumerate}
-        \item Compare \textbf{GPU vs CPU} (latency vs throughput) [s4]
-        \item \textbf{Thread $\leftrightarrow$ loop} / kernel structure [s5]
-        \item \textbf{Block \& Grid} organisation [s6--7]
-        \item \textbf{Execution model}: grid $\to$ SM $\to$ warps [s8--9]
-        \item \textbf{Limitations} / best practices [s10--11]
-        \item \textbf{Rendering pipeline} + GPU evolution (fixed $\to$ generic) [s14--20]
-        \item \textbf{OpenCL models} + platform / driver (ICD) [s21--24]
-        \item \textbf{work-item / work-group / NDRange} [s25--26]
-        \item \textbf{Command queue} (issuance vs completion) [s28]
-        \item \textbf{OpenCL memory model} [s30--32]
-        \item \textbf{OpenCL synchronisation} [s33]
-        \item \textbf{AMP recap} / openAMP [s40--44]
-    \end{enumerate}
-\end{concept}
-
 \subsection{LZ1 GPU vs CPU}
 
 \mult{2}
@@ -41,7 +24,7 @@
 
 \begin{example2}{Ex.\ LZ1 When is a GPU better?}
     When does a GPU beat a CPU, and why?
-    \tcblower
+     \\ \solution{Solution: }
     When there are many \important{independent identical} operations: the GPU runs thousands of threads and \important{hides latency} by switching between them (throughput). A CPU wins on branchy/sequential, latency-sensitive code.
 \end{example2}
 
@@ -78,7 +61,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ2 (s27/28) Loop to kernel}
     Rewrite \texttt{for(i<4096) c[i]=a[i]+b[i];} as a kernel; what replaces the loop?
-    \tcblower
+     \\ \solution{Solution: }
     See the code box: \texttt{i=get\_global\_id(0); c[i]=a[i]+b[i];}. The \important{index space} (NDRange of 4096) replaces the loop one work-item per element.
 \end{example2}
 
@@ -109,7 +92,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ3 (s6) Threads for [10][5]}
     Into how many threads does CUDA divide a \texttt{[10][5]} matrix op? Range of the threadID?
-    \tcblower
+     \\ \solution{Solution: }
     \important{50} threads (10$\times$5). \texttt{threadIdx.x}$\in$\important{0..9}, \texttt{threadIdx.y}$\in$\important{0..4} IDs $(0,0)$ to $(9,4)$.
 \end{example2}
 
@@ -136,7 +119,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ4 What is an SM?}
     What is an SM, how many threads in a warp, and what's in a Fermi SM?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Streaming Multiprocessor}; a warp = \important{32} threads; Fermi SM = 32 CUDA cores + 4 SFU + 16 load/store units.
 \end{example2}
 
@@ -169,7 +152,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ5 (s10/11) Multiple of 32?}
     Why make threads-per-block a multiple of 32? What happens to blocks that don't fit on an SM?
-    \tcblower
+     \\ \solution{Solution: }
     Warps are \important{32} wide $\to$ a non-multiple wastes lanes. Blocks that don't fit are \important{queued} and run when an SM frees up (threads are cheap, so over-subscribe).
 \end{example2}
 
@@ -185,7 +168,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ6 Why generic?}
     What did GPUs evolve from, and why did they become generic?
-    \tcblower
+     \\ \solution{Solution: }
     From a \important{fixed-function shading pipeline}. Unifying the shader stages into \important{programmable cores} let the same hardware run arbitrary compute kernels (GPGPU), not just graphics.
 \end{example2}
 
@@ -209,7 +192,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ7 Models \& hierarchy}
     Name the four OpenCL models and the platform hierarchy.
-    \tcblower
+     \\ \solution{Solution: }
     \important{Platform / Execution / Memory / Programming}. Hierarchy: \important{Host $\to$ Device $\to$ CU $\to$ PE}; the ICD selects the vendor driver.
 \end{example2}
 
@@ -240,7 +223,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ8 (s26) 4096 work-items}
     NDRange of 4096 work-items in groups of 512 relate work-item / work-group / NDRange.
-    \tcblower
+     \\ \solution{Solution: }
     \important{NDRange} = the 4096-index space; it splits into \important{work-groups} of 512 (each scheduled on one CU, sharing local memory); each \important{work-item} is one kernel instance with a \texttt{global\_id} (and a \texttt{local\_id} within its group).
 \end{example2}
 
@@ -256,7 +239,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ9 (s28) Who controls ordering?}
     Who decides the order of issuance, and who the order of completion?
-    \tcblower
+     \\ \solution{Solution: }
     The \important{host} issues in order; the \important{device/driver} decides completion order (in or out-of-order) unless the host insists on in-order completion.
 \end{example2}
 
@@ -288,7 +271,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ10 Where + how consistent?}
     Where does a value visible to all work-items live, and what does weak consistency mean here?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Global} memory. Weak consistency = updates are only guaranteed visible at \important{sync points} (a work-group barrier, or host-level for global) not continuously.
 \end{example2}
 
@@ -309,7 +292,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ11 (s33) Coordinate work-items}
     Two work-items in the same group need to coordinate; what about two in different groups?
-    \tcblower
+     \\ \solution{Solution: }
     Same group: \important{barrier / memory fence / atomics}. Different groups: \important{no in-kernel sync} split the work into separate kernels or synchronise at the host.
 \end{example2}
 
@@ -321,7 +304,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Ex.\ LZ12 (s40/41) Different ISA under one OS?}
     Can different-ISA cores run under a single OS? How are they coupled?
-    \tcblower
+     \\ \solution{Solution: }
     \important{No} one kernel targets one ISA. Couple them with \important{openAMP}: \texttt{remoteproc} + \texttt{rpmsg}/\texttt{virtio} (same as L7).
 \end{example2}
 
@@ -329,7 +312,7 @@ __kernel void vadd(__global float* a,
 
 \begin{example2}{Exam FS23 Q4.5 GPU kernel (6P)}
     Outline a commented GPU kernel for the dot product of every row-vector pair.
-    \tcblower
+     \\ \solution{Solution: }
 \begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
 // one thread per output cell (i,j)
 __global__ void dot(const int* in, int* out, int N){

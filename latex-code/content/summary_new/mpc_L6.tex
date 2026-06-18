@@ -1,19 +1,5 @@
 \section{L6 Memory}
 
-\begin{concept}{Lernziele (Learning Goals)}
-    \begin{enumerate}
-        \item Explain \textbf{cache} [s4] and \textbf{paging} [s5]
-        \item Explain the \textbf{two types of thrashing} [s13]
-        \item Explain the \textbf{cost of cache-oblivious} code (context switch) [s14]
-        \item Explain \textbf{cache writeback} [s16] and \textbf{multicore L1 read} on shared L2 [s17]
-        \item Explain \textbf{coherence} + conditions [s19] and \textbf{consistency} [s20]
-        \item Explain how coherence is \textbf{managed}: snooping [s21] and \textbf{directory} [s22]
-        \item Explain \textbf{false sharing} [s23]
-        \item Understand the \textbf{memory architectures} UMA/NUMA/SUMA + their limits [s25--29]
-    \end{enumerate}
-    \emph{Worked-example slides (no explicit Lernziel): the memory-access trace [s6--12] and ASID/CPU-pinning [s24].}
-\end{concept}
-
 \subsection{LZ1 Cache \& Paging}
 
 \mult{2}
@@ -44,7 +30,7 @@
 
 \begin{example2}{Ex.\ LZ1 Why is a[1] fast after a[0]?}
     Reading \texttt{a[0]} misses but \texttt{a[1..15]} are fast. Why? And resident vs working set?
-    \tcblower
+     \\ \solution{Solution: }
     The miss on \texttt{a[0]} fetches the \important{whole line} (incl.\ \texttt{a[1..15]}) $\to$ subsequent reads are \important{hits} (spatial locality). Resident = pages in memory; working = pages in use now.
 \end{example2}
 
@@ -64,7 +50,7 @@
 
 \begin{example2}{Ex.\ (s6--12) Trace the code}
     Walk \texttt{mov ea,var1; mov eb,var2; add ea,eb; mov var3,ea}. Why is the first fetch slow but the next fast?
-    \tcblower
+     \\ \solution{Solution: }
     First fetch (\texttt{0x100}): cache miss $\to$ MPU $\to$ MMU $\to$ TLB miss $\to$ walk empty $\to$ \important{page fault} (load frame \#2). Fill = whole line (I1--I4) + TLB mapping $\Rightarrow$ \texttt{0x104},\texttt{0x108} are \important{cache hits}. \texttt{var1} (\texttt{0x400}): 2nd page fault (frame \#8); \texttt{var2} = hit; \texttt{mov var3} = write $\to$ \important{dirty bit}.
     % INSERT IMAGE: L6 slide 6/7 Simple Computer System walk
 \end{example2}
@@ -92,7 +78,7 @@
 
 \begin{example2}{Ex.\ LZ2 Same-slot loop}
     A loop alternately touches two variables that map to the same cache line, then needs the first again. What happens?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Cache thrashing}: each access evicts the other $\to$ repeated misses $\to$ CPU stalled.
 \end{example2}
 
@@ -112,7 +98,7 @@
 
 \begin{example2}{Ex.\ LZ3 CPI after a switch}
     After a context switch, why does CPI spike then fall over the next thousands of instructions?
-    \tcblower
+     \\ \solution{Solution: }
     The cache + TLB are flushed $\to$ a burst of \important{misses + page-walks} $\to$ high CPI; as they \important{re-warm}, CPI drops back. This is the cost of not programming cache-aware.
 \end{example2}
 
@@ -139,7 +125,7 @@
 
 \begin{example2}{Ex.\ LZ4 Read then flush}
     (a) Two cores read \texttt{var1} what's in their caches? (b) When does a dirty line actually get written back?
-    \tcblower
+     \\ \solution{Solution: }
     (a) Both get a \emph{copy} in their L1 from the shared L2 read-sharing is fine, no invalidation until a write. (b) When the controller decides \emph{or} it needs the line (eviction) and the line is \important{dirty}.
 \end{example2}
 
@@ -167,7 +153,7 @@
 
 \begin{example2}{Ex.\ LZ5 The read sequences}
     P1 observes reads 0-1-1-2 while P2 observes 0-2-1-2. What is violated and what is needed? What is release consistency?
-    \tcblower
+     \\ \solution{Solution: }
     The two cores see writes in \emph{different} order $\to$ a \important{coherence protocol} must make P2 observe P1's write order. \important{Release consistency} = ordering is enforced \emph{only} at explicit synchronisation (memory barriers), maximising performance elsewhere.
 \end{example2}
 
@@ -191,7 +177,7 @@
 
 \begin{example2}{Ex.\ LZ6 P1 writes a shared line}
     \texttt{var1} is cached in both P1 and P2; P1 writes it. Trace it under snooping, then under a directory.
-    \tcblower
+     \\ \solution{Solution: }
     \important{Snooping}: P1 broadcasts the write on the bus $\to$ P2's copy invalidated. \important{Directory}: P1 tells the owner $\to$ owner invalidates P2 $\to$ ack $\to$ P1 writes and becomes owner.
 \end{example2}
 
@@ -207,7 +193,7 @@
 
 \begin{example2}{Ex.\ LZ7 Adjacent counters}
     Two cores each increment \texttt{v[0]} and \texttt{v[1]} (same line). Problem and fix?
-    \tcblower
+     \\ \solution{Solution: }
     \important{False sharing}: each write invalidates the other's copy $\to$ line ping-pongs. Fix: pad/align so the two vars are on \important{separate lines}.
 \end{example2}
 
@@ -223,7 +209,7 @@
 
 \begin{example2}{Ex.\ Cheap re-scheduling}
     How do you make re-scheduling a process on its previous core cheap?
-    \tcblower
+     \\ \solution{Solution: }
     Preserve its cache/TLB lines via \important{ASID}/physical tagging and \important{pin} it to that core (affinity) avoids the flush + re-warm cost.
 \end{example2}
 
@@ -255,7 +241,7 @@
 
 \begin{example2}{Ex.\ LZ8 Limits \& OS support}
     Why does the traditional bus cap at $\sim$4 CPUs? Distinguish UMA/NUMA/SUMA. How does Linux handle NUMA?
-    \tcblower
+     \\ \solution{Solution: }
     Bus latency grows with length $\to$ $\sim$4-CPU sweet spot. \important{UMA} equal access; \important{NUMA} fast local + slow remote (ccNUMA); \important{SUMA} interleaved $\to$ best-case UMA. Linux maps \emph{cells}$\to$\emph{nodes}, keeps memory local, uses \important{zonelists} by distance + \texttt{taskset}/\texttt{numactl}.
 \end{example2}
 
@@ -273,12 +259,12 @@
 
 \begin{example2}{Exam FS23 Q2.7 MMU (4P)}
     The CPU has no MMU what does the term mean, what does it do, and why might this device lack one?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Memory Management Unit} (1P). Responsible for \emph{virtual memory} address translation, protection, paging (1P). This is probably a \emph{real-time} device, so there is no reason for one (2P).
 \end{example2}
 
 \begin{example2}{Exam FS23 Q2.8 Missing cache info (2P)}
     Assessing the platform for CPU-driven edge detection what cache-relevant info is missing?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Line size} (1P) and \important{associativity} (1P).
 \end{example2}

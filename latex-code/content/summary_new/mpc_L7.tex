@@ -1,20 +1,5 @@
 \section{L7 CPU Architectures}
 
-\begin{concept}{Lernziele (Learning Goals)}
-    \begin{enumerate}
-        \item Know the \textbf{GP-CPU architectures} (Von Neumann / Harvard / Modified Harvard) [s4--6]
-        \item Know the \textbf{ways to parallelise} a CPU [s7]
-        \item Know how \textbf{VLIW / DSP} (multiple FUs) work [s8--10]
-        \item Know \textbf{CISC vs RISC} + pipeline hazards [s11]
-        \item Know \textbf{superpipelining vs superscalar} [s12]
-        \item Know the \textbf{in/out-of-order} execution modes [s13]
-        \item Understand \textbf{co-processors} (interface, sync, future) [s14--18]
-        \item Know the principle of \textbf{SMT} [s19]
-        \item Know the \textbf{AMP scenarios} + the questions to answer [s20--21]
-        \item Know \textbf{openAMP} (remoteproc, rpmsg/virtio) [s22--25]
-    \end{enumerate}
-\end{concept}
-
 \subsection{LZ1 GP-CPU Architectures}
 
 \mult{2}
@@ -43,7 +28,7 @@
 
 \begin{example2}{Ex.\ LZ1 (s5) A53 architecture}
     A53: L1-I (2-way) and L1-D (4-way) separate, unified L2 (16-way). What architecture?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Modified Harvard}: Harvard inside (split L1), von Neumann outside (unified L2/memory).
 \end{example2}
 
@@ -64,7 +49,7 @@
 
 \begin{example2}{Ex.\ LZ2 Name the four}
     List four ways to add parallelism inside a CPU and the kind each provides.
-    \tcblower
+     \\ \solution{Solution: }
     \important{Multicore}; \important{multiple FUs} (data); \important{multiple pipelines} (instruction); \important{heterogeneous PEs} (DSP/GPU). The ALU is not the only option (e.g.\ FPU/MAC for DSP work).
 \end{example2}
 
@@ -96,7 +81,7 @@
 
 \begin{example2}{Ex.\ LZ3 (s8) DSP with .M/.D/.L/.S}
     What memory architecture is this? How does execution work?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Harvard} (separate program/data bus). Execution = \important{VLIW}: the compiler packs one op per FU into a wide word, run in parallel (+ software pipelining). Big, incompatible code.
 \end{example2}
 
@@ -127,7 +112,7 @@
 
 \begin{example2}{Ex.\ LZ4 Why RISC pipelines better}
     Why is RISC more pipeline-friendly than CISC? Name the three hazard types.
-    \tcblower
+     \\ \solution{Solution: }
     Uniform load/store instructions fit a fixed pipeline cleanly (CISC needs microcode for variable, complex instructions). Hazards: \important{structural / data / control}.
 \end{example2}
 
@@ -151,7 +136,7 @@
 
 \begin{example2}{Ex.\ LZ5 Distinguish}
     What is the difference between superpipelining and superscalar?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Superpipeline} = more/finer stages (issue faster); \important{superscalar} = more pipelines (several issued per cycle).
 \end{example2}
 
@@ -171,7 +156,7 @@
 
 \begin{example2}{Ex.\ LZ6 Which is most aggressive?}
     Name the three superscalar scheduling modes; which extracts the most parallelism?
-    \tcblower
+     \\ \solution{Solution: }
     In-order/in-order; in-order issue/OoO exec; \important{OoO issue + OoO exec} (the most aggressive, needs the most scheduling hardware).
 \end{example2}
 
@@ -203,7 +188,7 @@
 
 \begin{example2}{Ex.\ LZ7 8087 / 8086}
     How does the CPU handle an instruction it doesn't recognise, and what's the catch with the 8087?
-    \tcblower
+     \\ \solution{Solution: }
     It \important{passes it to the co-pro}; if unrecognised there too $\to$ exception. Catch: the 8086 \important{stalls} while the 8087 performs \texttt{FMUL} (a pipeline/sync effect).
 \end{example2}
 
@@ -223,7 +208,7 @@
 
 \begin{example2}{Ex.\ LZ8 (s19) Why superscalar?}
     Why does SMT require a superscalar core? Typical speedup?
-    \tcblower
+     \\ \solution{Solution: }
     Only a superscalar core has \important{multiple issue slots/pipelines} per cycle to give the 2nd thread; a scalar core has nothing spare. Speedup $\sim$\important{30\%} (more about cache stalls than FU availability).
 \end{example2}
 
@@ -252,7 +237,7 @@
 
 \begin{example2}{Ex.\ LZ9 (s20) Different ISA under one OS?}
     Can different-ISA cores run under a single OS? Give two AMP scenarios.
-    \tcblower
+     \\ \solution{Solution: }
     \important{No} one kernel is built for one ISA (big.LITTLE works only because it's the \emph{same} ISA). Scenarios: different ISA (specialised PRU/GPU/DSP); same ISA split by task (comms vs I/O); big.LITTLE; different/no OS.
 \end{example2}
 
@@ -278,7 +263,7 @@
 
 \begin{example2}{Ex.\ LZ10 Bring up an R5 on the Zynq}
     On the Zynq UltraScale+, how does the APU start an R5 and talk to it?
-    \tcblower
+     \\ \solution{Solution: }
     \important{remoteproc}: \texttt{rproc\_boot} decodes the R5's ELF and boots it (the RPU starts halted). Communication via \important{rpmsg over virtio} ring buffers. Zynq = 4$\times$A53 SMP + 2$\times$R5 lockstep + FPGA accelerators.
 \end{example2}
 
@@ -296,30 +281,30 @@
 
 \begin{example2}{Exam FS23 Q2.1 Architecture (2P)}
     What architecture does this processor represent and why?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Modified Harvard} (1P). Because the data and instruction caches are \emph{separated}, which represents a (modified) Harvard architecture (1P).
 \end{example2}
 
 \begin{example2}{Exam FS23 Q2.2 Advantage (2P)}
     What is the advantage of the chosen architecture?
-    \tcblower
+     \\ \solution{Solution: }
     Instruction and data addressing are separated, so fetching one doesn't hinder the other (1P). Different, more fitting cache architectures can be used (1P).
 \end{example2}
 
 \begin{example2}{Exam FS23 Q2.3 L1/L2/L3 (max 4P)}
     What do L1, L2 and L3 represent?
-    \tcblower
+     \\ \solution{Solution: }
     Cache architecture (1P). L1 split into data + instruction cache (1P). L2 not existent / 0\,KB (1P). L3 common (shared) cache (1P).
 \end{example2}
 
 \begin{example2}{Exam FS23 Q2.5 M33 to A55 (1P)}
     How can the Cortex-M33 communicate with the A55 cores?
-    \tcblower
+     \\ \solution{Solution: }
     Via \important{shared external memory} (1P).
 \end{example2}
 
 \begin{example2}{Exam FS23 Q2.6 openAMP IPC (3P)}
     openAMP is in essence two IPC methods which, and why good for M33$\leftrightarrow$A55?
-    \tcblower
+     \\ \solution{Solution: }
     \important{Shared memory} (1P) and \important{signalling} (1P). Because the two cores are \emph{asynchronous} and openAMP suits that asynchronicity (1P).
 \end{example2}

@@ -1,0 +1,178 @@
+\section{L2 Data Decomposition}
+
+\begin{concept}{Lernziele (Learning Goals)}
+    \begin{enumerate}
+        \item Know and explain the \textbf{general solutions} (Algorithm-Structure tree: organise by task vs data) [S4]
+        \item Explain \textbf{why we took this path} justify each pattern choice top-down (Data Decomposition $\to$ \ldots $\to$ SPMD) [S5/9/11/17/28]
+        \item Understand the \textbf{granularity} knob and its impact (boundary cells, volume scaling, overhead) [S7]
+        \item Explain \textbf{efficiency}: work vs overhead, and how chunks map onto UEs [S7]
+        \item Describe the \textbf{communication-of-indices} issue (global vs local indices; locality) [S23]
+    \end{enumerate}
+\end{concept}
+
+\subsection{LZ1 General Solutions (Algorithm Structure)}
+
+\begin{concept}{Algorithm-Structure Decision Tree}
+    Pick by the \emph{major organising principle} $\times$ \emph{structure}:
+    \begin{itemize}
+        \item Organise by \textbf{Task}: Task Parallelism (linear) $\cdot$ Divide \& Conquer (recursive)
+        \item Organise by \textbf{Data}: Geometric Decomposition (array) $\cdot$ Recursive Data
+        \item Organise by \textbf{Flow}: Pipeline $\cdot$ Event-Based
+    \end{itemize}
+\end{concept}
+
+\begin{KR}{Recipe: Choose an Algorithm-Structure Pattern}
+    \paragraph{Organising principle} tasks, data, or data-flow?
+    \paragraph{Structure} linear/array or recursive?
+    \paragraph{Map} task+linear $\to$ Task Parallelism; task+recursive $\to$ Divide \& Conquer; data+array $\to$ Geometric Decomposition; data+recursive $\to$ Recursive Data.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ1 Pick the general solution}
+    A streamed $1024\times1024$ greyscale image, same filter applied per pixel. Which general solution, and why not task parallelism?
+    \tcblower
+    Organise by \important{data}, array structure $\Rightarrow$ \important{Geometric Decomposition}. Task parallelism gives only a handful of functional tasks; the data view scales with the number of image regions.
+\end{example2}
+
+\subsection{LZ2 The Top-Down Path}
+
+\mult{2}
+
+\begin{definition}{Data Decomposition}
+    Split the \emph{data structure} (image array) into chunks updated independently. Scales with \#chunks.
+\end{definition}
+
+\begin{definition}{Ghost / Halo Cells}
+    Read-only copy of a neighbour's boundary (the $3\times3$ kernel reads 1 row/col out). Exchanged a-priori or overlapped with compute.
+\end{definition}
+
+\multend
+
+\begin{concept}{The Path (and its justification)}
+    \begin{enumerate}
+        \item \textbf{Data Decomposition} large array, same op per region
+        \item \textbf{Dependency Analysis} group/order/share; mostly read-only + thin ghost halo
+        \item \textbf{Geometric Decomposition} local-neighbourhood stencil
+        \item \textbf{Loop Parallelism} split the per-pixel loops
+        \item \textbf{Distributed Array} distribute chunks to UEs
+        \item \textbf{SPMD} one program per UE, index by rank
+    \end{enumerate}
+\end{concept}
+
+\begin{KR}{Recipe: Justify the Top-Down Path}
+    For each layer state \emph{why} the pattern fits: expose concurrency (data vs task) $\to$ analyse dependencies (what is shared) $\to$ organise the algorithm (stencil $\Rightarrow$ geometric) $\to$ choose supporting structures (loop parallelism + distributed array) $\to$ map to UEs (SPMD).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ2 Justify the path for Sobel}
+    Walk the top-down path and justify each pattern choice.
+    \tcblower
+    \important{Data Decomposition} (image is a big array, op is per-region); \important{Dependency Analysis} (grey = read-only, only a 1-px ghost halo shared); \important{Geometric Decomposition} (local $3\times3$ stencil); \important{Loop Parallelism} (split the pixel loops); \important{Distributed Array} (hand chunks to UEs); \important{SPMD} (each UE runs the same code, indexed by rank).
+\end{example2}
+
+\subsection{LZ3 Granularity}
+
+\mult{2}
+
+\begin{definition}{Granularity Knob}
+    Chunk \emph{size} and \emph{number} a tunable to fit the solution onto different hardware.
+\end{definition}
+
+\begin{concept}{Impact of Granularity}
+    \begin{itemize}
+        \item computation scales with \emph{volume} (cells)
+        \item boundary/ghost cost scales with \emph{surface}
+        \item dependency-management time must be $\ll$ computation
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{formula}{Surface vs Volume}
+    equal volume $N^2/4$: square surface $2N$ vs strip $\tfrac{5N}{2}$ $\Rightarrow$ \important{square wins}.
+    \vspace{1mm}
+    $10\times10$: square 25 calc / 20 transfers; strip 20 / 25.
+    % INSERT IMAGE: L2 slide 13 surface vs volume sketch
+\end{formula}
+
+\begin{KR}{Recipe: Tune Granularity}
+    \paragraph{Enough chunks} $\geq$ cores (more for balancing).
+    \paragraph{Big enough} so dependency-management overhead $\ll$ per-chunk computation.
+    \paragraph{Compact shape} minimise surface/volume (square $>$ strip).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ3 Estimate the overhead}
+    $1024\times1024$ image in $1024\times128$ strips. Estimate communication vs computation.
+    \tcblower
+    Compute $\approx 1024\cdot128 = 131072$\,px (volume); ghost $\approx 2\times1024 = 2048$\,px (surface) $\Rightarrow$ comm/compute $\approx$ \important{1.6\%} overhead negligible, so this granularity is fine.
+\end{example2}
+
+\subsection{LZ4 Efficiency \& Mapping Chunks to UEs}
+
+\mult{2}
+
+\begin{concept}{Efficiency}
+    Maximise useful \emph{work} vs management \emph{overhead}; pick granularity (LZ3) accordingly.
+\end{concept}
+
+\begin{concept}{Distributed Array}
+    More chunks than UEs, assigned block-cyclic / round-robin so each UE owns several scattered chunks $\to$ smoother load.
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Map Chunks to UEs}
+    \paragraph{Over-decompose} \#chunks $>$ \#UEs.
+    \paragraph{Assign} block-cyclic / round-robin (or a dynamic queue).
+    \paragraph{Locality} pin UEs to cores so caches stay warm.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ4 Map 6 chunks to 4 UEs}
+    How do you map 6 chunks onto 4 UEs for good load balance?
+    \tcblower
+    Over-decompose (6 $>$ 4) so a UE that finishes early takes the next chunk; assign round-robin or via a \important{dynamic queue}; pin UEs for cache affinity. Equal chunks divisible by UEs $\Rightarrow$ static is cheaper.
+\end{example2}
+
+\subsection{LZ5 Communication of Indices}
+
+\begin{definition}{Index Mapping}
+    UEs work on \emph{local} copies/indices, but the array has \emph{global} indices.
+    \begin{itemize}
+        \item the global$\leftrightarrow$local mapping must be communicated to each UE
+        \item align computation with \emph{locality} (cache/memory) process spatially-related data together
+    \end{itemize}
+\end{definition}
+
+\begin{KR}{Recipe: Handle Index Mapping}
+    \paragraph{Offset} give each UE its global base index (local $r$ $\to$ global $r+$offset).
+    \paragraph{Ghosts} communicate neighbour boundary indices for the halo.
+    \paragraph{Locality} keep each chunk spatially contiguous to stay cache-friendly.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ5 Local vs global indices}
+    A UE owns rows 128--255 of a 1024-row image. What index info does it need, and why does locality matter?
+    \tcblower
+    Its global \important{offset} (128): local row $r$ maps to global $r+128$. It also needs neighbour boundary rows (\important{127} and \important{256}) as ghosts. Processing its contiguous band keeps spatially-related data in cache (cache/memory locality).
+\end{example2}
+
+\subsection{Exam FS23 Q3: Sobel Data Decomposition}
+
+\begin{concept}{Scenario}
+    Sobel on $1024\times1024$ streamed greyscale; 4-core SMP Linux; at least 6 chunks.
+\end{concept}
+
+\begin{example2}{Exam FS23 Q3.1 Design pattern (1P)}
+    Explain your choice of design pattern.
+    \tcblower
+    \important{Data decomposition}: the image is a large array and the same Sobel op applies independently to regions. Use more chunks than cores (\emph{quantum}) for \emph{load balancing}; respect the \emph{sequence of operations} (stream in $\to$ filter $\to$ out). State assumptions (greyscale, equal chunks).
+\end{example2}
+
+\begin{example2}{Exam FS23 Q3.2 Dimension the chunks (4P)}
+    Draw the chunks, dimension them in pixels, explain the dimensioning.
+    \tcblower
+    E.g.\ \important{8 horizontal strips of $1024\times128$\,px}: $\geq6$ chunks and $>4$ cores $\Rightarrow$ load balancing; $1024$ divides evenly; row-major friendly (contiguous, simple ghost rows). (Square $512\times256$ tiles also valid lower surface/volume.)
+\end{example2}
+
+\begin{example2}{Exam FS23 Q3.5 Ghost cells / cost / loop indices (7P)}
+    What is a ghost cell? Estimate computation vs communication for your chunk size. What are the loop indices?
+    \tcblower
+    \important{Ghost cell} = a boundary cell required by two chunks (a 1-row/col halo for the $3\times3$ kernel). For a $1024\times128$ strip: compute $\approx 1024\cdot128 = 131072$\,px $\times\sim4$ MACs (for $G_x$/$G_y$); ghost $\approx 2\times1024 = 2048$\,px $\Rightarrow$ comm/compute $\approx 1.6\%$ (\emph{surface} vs \emph{volume}). Loops run over the interior with a 1-px border: \texttt{for y=1..H} \texttt{for x=1..W}, reading neighbours $x\!-\!1..x\!+\!1$, $y\!-\!1..y\!+\!1$.
+\end{example2}

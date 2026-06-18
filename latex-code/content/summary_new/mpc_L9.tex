@@ -1,0 +1,304 @@
+\section{L9 MPI (Message Passing Interface)}
+
+\begin{concept}{Lernziele (Learning Goals)}
+    \begin{enumerate}
+        \item \textbf{Distributed architectures} protocols + common problems [s6]
+        \item The \textbf{six fundamental MPI operations} [s7--8]
+        \item \textbf{Communication models} (communicator/rank, P2P vs collective) [s9]
+        \item The \textbf{run-time} (compile/run, SPMD/MIMD, binding) [s10--13]
+        \item \textbf{Blocking vs non-blocking} [s14]
+        \item The \textbf{four blocking send modes} [s15--16]
+        \item \textbf{Non-blocking} send/recv (Wait/Test) [s17]
+        \item \textbf{Message structure} + data types (+ derived) [s18--19]
+        \item \textbf{Collectives} (Bcast / Scatter / Gather) [s20]
+        \item \textbf{Reduction} (\texttt{MPI\_Reduce}) [s21]
+    \end{enumerate}
+\end{concept}
+
+\subsection{LZ1 Distributed Architectures}
+
+\mult{2}
+
+\begin{definition}{Protocols (rising complexity)}
+    single var/record $\to$ memory-range $\to$ scatter-gather $\to$ RPC $\to$ distributed objects.
+\end{definition}
+
+\begin{definition}{Common Problems}
+    \begin{itemize}
+        \item app $\leftrightarrow$ channel interface
+        \item \important{endianness} of the ends + channel
+        \item channel reliability; app complexity
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Spot the Distributed-Comms Issues}
+    match the protocol to the data shape; \emph{always} handle endianness, a defined wire format, and channel reliability.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ1 Struct across machines}
+    You send a C struct from a big-endian to a little-endian node. What must you handle?
+    \tcblower
+    \important{Endianness} conversion, a defined \important{wire format} (the interface), and channel \important{reliability}. (MPI derived datatypes help with the format.)
+\end{example2}
+
+\subsection{LZ2 The Six Fundamental Operations}
+
+\mult{2}
+
+\begin{definition}{The Six}
+    \begin{itemize}
+        \item \texttt{MPI\_Init} start environment
+        \item \texttt{MPI\_Comm\_size} \#processes
+        \item \texttt{MPI\_Comm\_rank} this rank
+        \item \texttt{MPI\_Send} / \texttt{MPI\_Recv}
+        \item \texttt{MPI\_Finalize}
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Bindings}
+    C / C++ / Fortran. Build with \texttt{mpicc}, run with \texttt{mpirun}.
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Skeleton of an MPI Program}
+    \texttt{Init} $\to$ \texttt{Comm\_size}/\texttt{Comm\_rank} $\to$ branch by rank $\to$ \texttt{Send}/\texttt{Recv} or collectives $\to$ \texttt{Finalize}.
+    \begin{itemize}
+        \item distribute data: \texttt{Bcast} (all need it) or \texttt{Scatter} (split)
+        \item each rank computes its slice; collect with \texttt{Gather} / combine with \texttt{Reduce}
+    \end{itemize}
+\end{KR}
+
+\begin{example2}{Ex.\ LZ2 Name the six}
+    List the six fundamental MPI operations and what each does.
+    \tcblower
+    \important{Init} (start), \important{Comm\_size} (\#procs), \important{Comm\_rank} (my rank), \important{Send}, \important{Recv}, \important{Finalize} (exit).
+\end{example2}
+
+\subsection{LZ3 Communication Models}
+
+\mult{2}
+
+\begin{definition}{Communicator \& Rank}
+    \begin{itemize}
+        \item communicator = group of processes (default \texttt{MPI\_COMM\_WORLD})
+        \item rank = a process's number in it
+    \end{itemize}
+\end{definition}
+
+\begin{definition}{Two Models}
+    \begin{itemize}
+        \item point-to-point (Send/Recv)
+        \item collective (Bcast/Scatter/Gather/Reduce)
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: P2P or Collective?}
+    one rank to one rank $\to$ point-to-point; one-to-many / many-to-one / all-to-all $\to$ a collective (more efficient, e.g.\ tree Bcast).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ3 Communicator / rank}
+    What is a communicator and a rank? When do you use a collective over point-to-point?
+    \tcblower
+    A \important{communicator} groups processes (\texttt{MPI\_COMM\_WORLD}); a \important{rank} is a process's index. Use a \important{collective} for group-wide data movement (broadcast/scatter/gather/reduce); point-to-point for pairwise messages.
+\end{example2}
+
+\subsection{LZ4 The Run-time}
+
+\mult{2}
+
+\begin{definition}{Compile / Run}
+    \begin{itemize}
+        \item \texttt{mpicc} (wraps gcc)
+        \item \texttt{mpirun -n X} = X slots (SPMD)
+        \item MIMD: \texttt{-n 2 a : -n 2 b}
+        \item clusters via ssh + host file
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Binding \& Scheduling}
+    \begin{itemize}
+        \item bind: \texttt{--cpu-set} (+ memory for RDMA)
+        \item scheduling = distributing \emph{pinned} tasks; the OS does the rest
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Launch an MPI Job}
+    build with \texttt{mpicc}; run \texttt{mpirun -n X} for X ranks; over-subscribing (procs $>$ cores) degrades IPC; pin with \texttt{--cpu-set}.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ4 Build / run / oversubscribe}
+    How do you build and run an MPI program on 4 cores? What does oversubscribing do?
+    \tcblower
+    \texttt{mpicc -o prog prog.c}; \texttt{mpirun -n 4 ./prog}. \important{Oversubscribing} (more processes than cores) \important{degrades IPC} tell \texttt{mpirun} the slot count.
+\end{example2}
+
+\subsection{LZ5 Blocking vs Non-blocking}
+
+\begin{definition}{Blocking vs Non-blocking}
+    \begin{itemize}
+        \item blocking send: waits until data leaves the output buffer
+        \item blocking recv: waits until all data received
+        \item non-blocking: returns immediately; complete later (Wait/Test)
+    \end{itemize}
+\end{definition}
+
+\begin{KR}{Recipe: Blocking or Non-blocking?}
+    simple / need the buffer reusable now $\to$ blocking. Want to \emph{overlap} comms with compute $\to$ non-blocking (post \texttt{Isend}/\texttt{Irecv}, compute, then \texttt{Wait}).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ5 Why non-blocking?}
+    When would you choose non-blocking communication?
+    \tcblower
+    To \important{overlap communication with computation}: post \texttt{Isend}/\texttt{Irecv}, do useful work, then \texttt{Wait} hiding transfer latency.
+\end{example2}
+
+\subsection{LZ6 The Four Blocking Send Modes}
+
+\mult{2}
+
+\begin{definition}{Standard \& Synchronous}
+    \begin{itemize}
+        \item \textbf{Standard} (\texttt{Send}): MPI decides buffering; beware long sends
+        \item \textbf{Synchronous} (\texttt{Ssend}): handshake \important{safest}, highest sync
+    \end{itemize}
+\end{definition}
+
+\begin{definition}{Buffered \& Ready}
+    \begin{itemize}
+        \item \textbf{Buffered} (\texttt{Bsend}): app-managed buffer; decouples sender
+        \item \textbf{Ready} (\texttt{Rsend}): \important{lowest overhead}; recv must precede send
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Pick a Send Mode}
+    default $\to$ Standard; guaranteed/safe $\to$ Ssend; decouple sender from receiver $\to$ Bsend; receiver already waiting $\to$ Rsend.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ6 Safest vs cheapest}
+    Which blocking send mode is safest, and which has the lowest overhead (and its precondition)?
+    \tcblower
+    \important{Synchronous} (\texttt{Ssend}) is safest (handshake). \important{Ready} (\texttt{Rsend}) has the lowest overhead but the \important{receive must already be posted}.
+\end{example2}
+
+\subsection{LZ7 Non-blocking Send/Recv}
+
+\begin{definition}{Isend / Irecv}
+    Return a \emph{request} immediately.
+    \begin{itemize}
+        \item \texttt{MPI\_Wait} block until the request completes
+        \item \texttt{MPI\_Test} poll whether it completed
+    \end{itemize}
+\end{definition}
+
+\begin{KR}{Recipe: Use Non-blocking}
+    \texttt{Isend}/\texttt{Irecv} $\to$ do independent work $\to$ \texttt{Wait} (or poll with \texttt{Test}) \emph{before} reusing the buffer.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ7 Did it finish?}
+    After an \texttt{MPI\_Isend}, how do you know the transfer is done?
+    \tcblower
+    Check the request: \important{\texttt{MPI\_Wait}} (blocks until complete) or \important{\texttt{MPI\_Test}} (polls). Don't reuse the buffer before it completes.
+\end{example2}
+
+\subsection{LZ8 Message Structure \& Data Types}
+
+\mult{2}
+
+\begin{definition}{Envelope + Body}
+    \begin{itemize}
+        \item \textbf{envelope}: dst/src, tag, comm
+        \item \textbf{body}: buffer, count, datatype
+        \item standard types: \texttt{MPI\_INT}/\texttt{SHORT}/\texttt{LONG}\ldots
+    \end{itemize}
+\end{definition}
+
+\begin{definition}{Derived Types}
+    Custom types via \texttt{MPI\_Type\_create\_struct} (e.g.\ send a C \texttt{struct} as one message).
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Build a Message}
+    body = (buf, count, datatype); envelope = (dst/src, tag, comm). Sending a struct? define a \important{derived datatype} so both ends interpret the bytes identically.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ8 Two parts + a struct}
+    What two parts make up an MPI message, and how do you send a C struct?
+    \tcblower
+    \important{Envelope} (dst/src, tag, comm) + \important{body} (buf, count, datatype). For a struct, build a \important{derived datatype} with \texttt{MPI\_Type\_create\_struct}.
+\end{example2}
+
+\subsection{LZ9 Collectives}
+
+\mult{2}
+
+\begin{definition}{Bcast}
+    Root sends the same data to all (tree-implemented for efficiency).
+\end{definition}
+
+\begin{definition}{Scatter / Gather}
+    \begin{itemize}
+        \item \textbf{Scatter}: root sends chunks out to nodes
+        \item \textbf{Gather}: collect the chunks back
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Choose a Collective}
+    same data to everyone $\to$ \texttt{Bcast}; split data across ranks $\to$ \texttt{Scatter}; collect results $\to$ \texttt{Gather}; combine $\to$ \texttt{Reduce}.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ9 Distribute then collect}
+    Give every rank the full matrix, then collect each rank's row-results. Which collectives?
+    \tcblower
+    \important{Bcast} the matrix (all need it) or \texttt{Scatter} if each rank only needs its rows then \important{Gather} the results to the root.
+\end{example2}
+
+\subsection{LZ10 Reduction}
+
+\begin{definition}{MPI\_Reduce}
+    \texttt{MPI\_Reduce(send, recv, count, type, op, root, comm)} combines a value from every rank with an op (\texttt{SUM}/\texttt{MAX}/\texttt{MIN}/\texttt{PROD}\ldots), element-wise on arrays. \texttt{Allreduce} $\to$ result to all.
+\end{definition}
+
+\begin{KR}{Recipe: Reduce across Ranks}
+    each rank holds a partial $\to$ pick the op $\to$ \texttt{MPI\_Reduce} to a root (or \texttt{Allreduce} to every rank).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ10 Combine partial sums}
+    Every rank computed a partial sum; produce the total at rank 0.
+    \tcblower
+    \important{\texttt{MPI\_Reduce(\&partial, \&total, 1, MPI\_INT, MPI\_SUM, 0, MPI\_COMM\_WORLD)}}. Use \texttt{Allreduce} if every rank needs the total.
+\end{example2}
+
+\begin{remark}
+    \important{Cross-lecture threads:} Reduction OpenMP(L3)$\leftrightarrow$accumulate(L1-2)$\leftrightarrow$\texttt{MPI\_Reduce}(L9) $\cdot$ SPMD pattern(L2)$\leftarrow$SIMD/SIMT(L4)$\to$MPI(L9)$\to$CUDA/OpenCL(L8) $\cdot$ Scheduling L1$\to$L3$\to$L5$\to$L8 $\cdot$ Affinity MQMS(L5)$\leftrightarrow$ASID(L6)$\leftrightarrow$\texttt{--cpu-set}(L9) $\cdot$ Amdahl(L5) caps all.
+\end{remark}
+
+\subsection{Exam FS23 Q4.6: MPI}
+
+\begin{example2}{Exam FS23 Q4.6 MPI directives (2P)}
+    Farm the $220\times220$ calculation to 200 four-core machines write the MPI directives for the CPU code.
+    \tcblower
+\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+MPI_Init(&argc, &argv);
+MPI_Comm_size(MPI_COMM_WORLD, &size);
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+MPI_Bcast(in, N*N, MPI_INT, 0, MPI_COMM_WORLD);  // all need matrix
+// each rank does row band [rank*N/size .. (rank+1)*N/size)
+for (int i = rank*N/size; i < (rank+1)*N/size; i++)
+  for (int j = 0; j < N; j++) { /* dot -> local_out */ }
+MPI_Gather(local_out, rows*N, MPI_INT,
+           out, rows*N, MPI_INT, 0, MPI_COMM_WORLD);
+MPI_Finalize();
+\end{lstlisting}
+\end{example2}

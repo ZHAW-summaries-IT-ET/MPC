@@ -1,10 +1,10 @@
-\section{L6 -- Memory}
+\section{L6 Memory}
 
 \subsection{Cache \& Paging}
 
 \mult{2}
 
-\begin{definition}{Cache}\\
+\begin{definition}{Cache}
     Fast memory near/in the CPU, \important{transparent} to the programmer.
     \begin{itemize}
         \item hit $\to$ served fast
@@ -12,7 +12,7 @@
     \end{itemize}
 \end{definition}
 
-\begin{definition}{Paging}\\
+\begin{definition}{Paging}
     Address space $\to$ pages (4K/2M); physical $\to$ frames.
     \begin{itemize}
         \item load only used pages (any frame)
@@ -23,11 +23,11 @@
 
 \multend
 
-\begin{concept}{Why a Hierarchy}\\
+\begin{concept}{Why a Hierarchy}
     The CPU is far faster than RAM (the bottleneck), so caches + paging hide latency and use main memory efficiently.
 \end{concept}
 
-\begin{example2}{Ex.\ S4/5 -- Explain cache \& paging}\\
+\begin{example2}{Ex.\ S4/5 Explain cache \& paging}
     What is a cache (hit/miss)? What is paging (resident vs working set)?
     \tcblower
     Cache = fast transparent memory; miss $\to$ fetch a line. Paging = pages$\to$frames, only used pages resident; \important{resident} = in memory, \important{working} = in use now.
@@ -35,11 +35,11 @@
 
 \subsection{The Memory Access Walk}
 
-\begin{definition}{Access Chain}\\
+\begin{definition}{Access Chain}
     CPU pipeline (IF$\cdot$ID$\cdot$EX$\cdot$MEM$\cdot$WB) $\to$ Cache $\to$ \textbf{MPU} (rights) $\to$ \textbf{MMU} (\textbf{TLB} = recent mappings; else page-table walk) $\to$ \textbf{page fault} $\to$ MM software.
 \end{definition}
 
-\begin{KR}{Recipe: Trace a Memory Access}\\
+\begin{KR}{Recipe: Trace a Memory Access}
     \textbf{Pipeline} stage requests an address.
     \textbf{Cache} hit $\to$ done; miss $\to$ continue.
     \textbf{MPU} access allowed?
@@ -48,25 +48,25 @@
     \textbf{Fill} TLB caches mapping; cache reads a line; write sets \important{dirty bit}.
 \end{KR}
 
-\begin{example2}{Ex.\ S6--12 -- Worked code trace}\\
+\begin{example2}{Ex.\ S6--12 Worked code trace}
     Walk \texttt{mov ea,var1; mov eb,var2; add ea,eb; mov var3,ea}. Why first fetch slow, next fast?
     \tcblower
     First fetch (\texttt{0x100}): cache miss $\to$ MPU $\to$ MMU $\to$ TLB miss $\to$ walk empty $\to$ \important{page fault} (load frame \#2). Fill = whole line (I1--I4) + TLB mapping $\Rightarrow$ \texttt{0x104},\texttt{0x108} are \important{cache hits}. \texttt{var1} (\texttt{0x400}): 2nd page fault (frame \#8); \texttt{var2} = hit; \texttt{mov var3} = write $\to$ \important{dirty bit}.
-    % INSERT IMAGE: L6 slide 6/7 -- Simple Computer System walk
+    % INSERT IMAGE: L6 slide 6/7 Simple Computer System walk
 \end{example2}
 
 \subsection{Thrashing \& Context-Switch Cost}
 
 \mult{2}
 
-\begin{definition}{Thrashing}\\
+\begin{definition}{Thrashing}
     \begin{itemize}
         \item \textbf{cache}: many lines map to one slot $\to$ evict/miss loop
         \item \textbf{disk}: too few frames $\to$ page evict/reload loop
     \end{itemize}
 \end{definition}
 
-\begin{concept}{Switch Cost}\\
+\begin{concept}{Switch Cost}
     \begin{itemize}
         \item cache \important{high} (flush + write-back)
         \item TLB \important{high} (flush)
@@ -76,7 +76,7 @@
 
 \multend
 
-\begin{example2}{Ex.\ S13--15 -- Thrashing \& switch cost}\\
+\begin{example2}{Ex.\ S13--15 Thrashing \& switch cost}
     Explain both thrashing types and the cost of cache-oblivious code.
     \tcblower
     Cache thrash = repeated misses (same slot); disk thrash = repeated page evict/reload. Switch cost dominated by cache+TLB flush; CPI spikes then re-warms.
@@ -84,15 +84,15 @@
 
 \subsection{Cache Writeback \& Multicore}
 
-\begin{definition}{Writeback (dirty bit)}\\
+\begin{definition}{Writeback (dirty bit)}
     A dirty line is written back when (1) the controller decides, or (2) it needs the line (eviction). Then dirty$\to$0; eviction sets valid$\to$0, refill, valid$\to$1.
 \end{definition}
 
-\begin{KR}{Recipe: Will a Writeback Happen?}\\
+\begin{KR}{Recipe: Will a Writeback Happen?}
     Check the dirty bit: dirty + (controller decision or eviction) $\to$ write back first. Clean line $\to$ just refill.
 \end{KR}
 
-\begin{example2}{Ex.\ S16--18 -- Writeback \& multicore L1/L2}\\
+\begin{example2}{Ex.\ S16--18 Writeback \& multicore L1/L2}
     When does a dirty line write back? L1 read/write-back on shared L2?
     \tcblower
     See recipe. Multicore: read pulls L2$\to$L1; \important{flushing L1 requires flushing L2}; L1$\to$L2 write-back may trigger L2$\to$memory; coherence keeps other L1s consistent.
@@ -102,11 +102,11 @@
 
 \mult{2}
 
-\begin{definition}{Coherence}\\
-    Visibility of a write across cores. A write \emph{will} become visible (order to one location preserved) -- says nothing about \emph{when}; not in ISA; necessary not sufficient.
+\begin{definition}{Coherence}
+    Visibility of a write across cores. A write \emph{will} become visible (order to one location preserved) says nothing about \emph{when}; not in ISA; necessary not sufficient.
 \end{definition}
 
-\begin{definition}{Consistency}\\
+\begin{definition}{Consistency}
     Ordering of accesses to \emph{different} locations as seen by another core.
     \begin{itemize}
         \item sequential / processor / release
@@ -118,37 +118,37 @@
 
 \mult{2}
 
-\begin{concept}{Snooping}\\
+\begin{concept}{Snooping}
     Bus broadcast; controllers listen, invalidate/update. Non-scalable.
 \end{concept}
 
-\begin{concept}{Directory}\\
+\begin{concept}{Directory}
     Point-to-point; owner invalidates sharers, waits ack, writes, becomes owner. Scalable.
 \end{concept}
 
 \multend
 
-\begin{definition}{False Sharing}\\
+\begin{definition}{False Sharing}
     Two cores write \emph{different} vars in the \emph{same line} $\to$ line ping-pongs (useless coherence traffic). Fix: pad/align to separate lines.
 \end{definition}
 
-\begin{KR}{Recipe: Diagnose Coherence / False Sharing}\\
+\begin{KR}{Recipe: Diagnose Coherence / False Sharing}
     Same line in $\geq$2 caches + a write $\to$ invalidation traffic. Same var = true sharing; different vars = \important{false sharing} $\to$ pad/align.
 \end{KR}
 
-\begin{example2}{Ex.\ S19/20 -- Coherence vs consistency}\\
+\begin{example2}{Ex.\ S19/20 Coherence vs consistency}
     Define both; what does 0-1-1-2 / 0-2-1-2 show?
     \tcblower
     Two cores observe writes in \emph{different} order $\to$ a protocol must make P2 see P1's order (coherence). Consistency = cross-location ordering (sequential/processor/release).
 \end{example2}
 
-\begin{example2}{Ex.\ S21--23 -- Protocols \& false sharing}\\
+\begin{example2}{Ex.\ S21--23 Protocols \& false sharing}
     Outline snooping vs directory; explain false sharing.
     \tcblower
     Snooping = bus broadcast invalidation (e.g.\ P1 writes \texttt{var1} $\to$ P2 invalidated), non-scalable. Directory = owner-based, scalable. False sharing = different vars, same line $\to$ ping-pong; fix by padding.
 \end{example2}
 
-\begin{example2}{Ex.\ S24 -- ASID / CPU pinning}\\
+\begin{example2}{Ex.\ S24 ASID / CPU pinning}
     How is cache/TLB state preserved across switches?
     \tcblower
     Physical-address tagging or an \important{ASID} lets one process's lines survive while another runs $\Rightarrow$ cheap to re-schedule on the same core (\important{CPU pinning / affinity}).
@@ -156,20 +156,20 @@
 
 \subsection{Memory Architectures}
 
-\begin{definition}{UMA / NUMA / SUMA}\\
+\begin{definition}{UMA / NUMA / SUMA}
     \begin{itemize}
         \item \textbf{UMA}: equal access, $\sim$4-CPU limit, L2/L3 buffer
         \item \textbf{NUMA}: fast local, slow remote via interconnect (ccNUMA)
         \item \textbf{SUMA}: interleaving $\to$ best-case UMA
     \end{itemize}
-    % INSERT IMAGE: L6 slides 25-28 -- UMA/NUMA/SUMA diagrams
+    % INSERT IMAGE: L6 slides 25-28 UMA/NUMA/SUMA diagrams
 \end{definition}
 
-\begin{KR}{Recipe: Classify a Memory Architecture}\\
+\begin{KR}{Recipe: Classify a Memory Architecture}
     equal access $\to$ UMA; fast-local/slow-remote $\to$ NUMA; interleaved-to-fake-contiguous $\to$ SUMA.
 \end{KR}
 
-\begin{example2}{Ex.\ S25--29 -- Architectures \& OS support}\\
+\begin{example2}{Ex.\ S25--29 Architectures \& OS support}
     Bus limits? UMA/NUMA/SUMA? How does Linux handle NUMA?
     \tcblower
     Bus latency grows with length $\to$ $\sim$4-CPU limit. UMA/NUMA/SUMA as above. Linux maps HW \emph{cells} $\to$ \emph{nodes}, keeps work+memory local (affinity), \important{zonelists} by NUMA distance; \texttt{taskset}/\texttt{numactl}/\texttt{sched\_setaffinity}.

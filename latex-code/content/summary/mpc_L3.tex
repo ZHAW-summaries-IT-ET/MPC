@@ -1,28 +1,28 @@
-\section{L3 -- OpenMP}
+\section{L3 OpenMP}
 
 \subsection{OpenMP Model}
 
-\begin{concept}{What OpenMP Is}\\
+\begin{concept}{What OpenMP Is}
     Runtime library + \texttt{\#pragma} directives + env vars. Shared-memory, Fork-Join + SPMD.
     \begin{itemize}
         \item \important{implicit barrier} at end of every parallel region
     \end{itemize}
 \end{concept}
 
-\begin{definition}{Parallel Region}\\
+\begin{definition}{Parallel Region}
     \texttt{\#pragma omp parallel} spawns a team of threads that all execute the following block.
 \end{definition}
 
 \subsection{Worksharing \& Data Scope}
 
-\begin{concept}{parallel vs parallel for}\\
+\begin{concept}{parallel vs parallel for}
     \begin{itemize}
         \item \texttt{parallel} alone: each thread runs the \emph{whole} block (replicate)
         \item \texttt{parallel for}: iterations \emph{split} across the team (worksharing)
     \end{itemize}
 \end{concept}
 
-\begin{definition}{Data Scope Clauses}\\
+\begin{definition}{Data Scope Clauses}
     \begin{itemize}
         \item \texttt{shared}: one copy (concurrent writes = race)
         \item \texttt{private}: per-thread, uninitialised, discarded
@@ -31,36 +31,36 @@
     \end{itemize}
 \end{definition}
 
-\begin{KR}{Recipe: Predict OpenMP Behaviour}\\
+\begin{KR}{Recipe: Predict OpenMP Behaviour}
     \textbf{Read directives} replicate vs worksharing.
     \textbf{Scope each var} shared / private / reduction.
     \textbf{Find races} shared var written by $>1$ iteration $\to$ indeterminate.
     \textbf{Count} multiply by thread count only in replicated regions.
 \end{KR}
 
-\begin{example2}{Ex.\ S7 -- How many prints?}\\
+\begin{example2}{Ex.\ S7 How many prints?}
     $T$ threads, $n=5$: \texttt{parallel} alone vs \texttt{parallel for}?
     \tcblower
     \important{$T\times5$} (replicated) vs \important{$5$} (shared). \texttt{parallel} makes threads; \texttt{for} splits work.
 \end{example2}
 
-\begin{example2}{Ex.\ S8 -- shared vs private value of \texttt{b}}\\
+\begin{example2}{Ex.\ S8 shared vs private value of \texttt{b}}
     \texttt{shared(b)} loop then \texttt{private(b)} loop, both \texttt{b=a+i}. Final \texttt{b}?
     \tcblower
     S1 \texttt{shared}: \important{race} $\to$ any of $7..16$. S2 \texttt{private}: copies discarded $\to$ global unchanged. Final = whatever S1 left.
 \end{example2}
 
-\begin{example2}{Ex.\ S21 -- Race-free sum}\\
+\begin{example2}{Ex.\ S21 Race-free sum}
     How to sum an array without a race?
     \tcblower
-    \texttt{\#pragma omp parallel for reduction(+:sum)} -- each thread keeps a private partial, combined after the join.
+    \texttt{\#pragma omp parallel for reduction(+:sum)} each thread keeps a private partial, combined after the join.
 \end{example2}
 
 \subsection{Synchronisation}
 
 \mult{2}
 
-\begin{definition}{Primitives}\\
+\begin{definition}{Primitives}
     \begin{itemize}
         \item \texttt{critical}: one block at a time
         \item \texttt{atomic}: single indivisible op
@@ -69,7 +69,7 @@
     \end{itemize}
 \end{definition}
 
-\begin{concept}{Barrier}\\
+\begin{concept}{Barrier}
     \begin{itemize}
         \item spin vs block (\texttt{OMP\_WAIT\_POLICY})
         \item release order = OS, nondeterministic
@@ -79,17 +79,17 @@
 
 \multend
 
-\begin{KR}{Recipe: Pick a Sync Primitive}\\
+\begin{KR}{Recipe: Pick a Sync Primitive}
     one block $\to$ \texttt{critical}; one op $\to$ \texttt{atomic}; accumulate $\to$ \texttt{reduction}; phase wall $\to$ barrier; cross-process $\to$ semaphore.
 \end{KR}
 
-\begin{example2}{Ex.\ S18 -- Barrier internals}\\
+\begin{example2}{Ex.\ S18 Barrier internals}
     Spin or block on arrival? Who runs first on release?
     \tcblower
     \important{Depends}: short + spare cores $\to$ spin; long/oversubscribed $\to$ block. Release order = \important{OS, nondeterministic} (use \texttt{ordered}).
 \end{example2}
 
-\begin{example2}{Ex.\ S22 -- nowait}\\
+\begin{example2}{Ex.\ S22 nowait}
     Effect of \texttt{nowait} on \texttt{single}?
     \tcblower
     \texttt{single} = one thread runs the block (implicit barrier). \texttt{nowait} \important{removes the barrier} $\to$ others proceed (safe only with no dependency).
@@ -97,7 +97,7 @@
 
 \subsection{Scheduling \& Runtime}
 
-\begin{concept}{Loop Schedules}\\
+\begin{concept}{Loop Schedules}
     \begin{itemize}
         \item \texttt{static}: chunks up-front (even loads)
         \item \texttt{dynamic}: grab from queue (uneven)
@@ -105,7 +105,7 @@
     \end{itemize}
 \end{concept}
 
-\begin{example2}{Ex.\ S28 -- Thread count}\\
+\begin{example2}{Ex.\ S28 Thread count}
     What determines the number of threads?
     \tcblower
     Precedence: \texttt{if} $\to$ \texttt{num\_threads} $\to$ \texttt{omp\_set\_num\_threads} $\to$ \texttt{OMP\_NUM\_THREADS} $\to$ default ($\approx$\#CPUs).

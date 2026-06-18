@@ -1,10 +1,10 @@
-\section{L4 -- SIMD (Flynn, NEON, MISD)}
+\section{L4 SIMD (Flynn, NEON, MISD)}
 
 \subsection{Flynn's Taxonomy}
 
 \mult{2}
 
-\begin{definition}{The Four Classes}\\
+\begin{definition}{The Four Classes}
     instruction streams $\times$ data streams:
     \begin{itemize}
         \item \textbf{SISD}: 1 ALU (single core)
@@ -14,17 +14,17 @@
     \end{itemize}
 \end{definition}
 
-\begin{concept}{SIMD $\to$ SIMT $\to$ SPMD}\\
+\begin{concept}{SIMD $\to$ SIMT $\to$ SPMD}
     Increasingly abstract versions of the same lockstep-on-data idea (hardware $\to$ Nvidia threads $\to$ software pattern).
 \end{concept}
 
 \multend
 
-\begin{KR}{Recipe: Classify with Flynn}\\
+\begin{KR}{Recipe: Classify with Flynn}
     Count instruction streams and data streams: 1/1 SISD, 1/many SIMD, many/1 MISD, many/many MIMD.
 \end{KR}
 
-\begin{example2}{Ex.\ S6/9 -- SPMD pattern}\\
+\begin{example2}{Ex.\ S6/9 SPMD pattern}
     What is SPMD and why is it here?
     \tcblower
     One program per UE, unique ID, branch/index by ID. It is the software generalisation of \important{SIMD} (same instruction, different data).
@@ -32,16 +32,16 @@
 
 \subsection{ARM NEON}
 
-\begin{definition}{NEON Registers \& Lanes}\\
+\begin{definition}{NEON Registers \& Lanes}
     ARM SIMD unit.
     \begin{itemize}
         \item \textbf{Q} (128-bit) = $2{\times}64$ / $4{\times}32$ / $8{\times}16$ / $16{\times}8$
         \item \textbf{D} (64-bit) = half as many lanes
     \end{itemize}
-    % INSERT IMAGE: L4 slide 13 -- register split into lanes
+    % INSERT IMAGE: L4 slide 13 register split into lanes
 \end{definition}
 
-\begin{concept}{NEON Properties}\\
+\begin{concept}{NEON Properties}
     \begin{itemize}
         \item built around \important{MAC} (multiply-accumulate)
         \item \important{no divide} (reciprocal estimate only)
@@ -49,7 +49,7 @@
     \end{itemize}
 \end{concept}
 
-\begin{KR}{Recipe: Decode a NEON Intrinsic}\\
+\begin{KR}{Recipe: Decode a NEON Intrinsic}
     Pattern \texttt{v <op> q? \_ <type>}:
     \textbf{op} the operation (\texttt{mul}, \texttt{mla}, \ldots).
     \textbf{q?} present $\Rightarrow$ 128-bit Q, else 64-bit D.
@@ -57,25 +57,25 @@
     \textbf{result} lane-wise op over \emph{count} elements.
 \end{KR}
 
-\begin{example2}{Ex.\ S18/19 -- Decode intrinsics}\\
+\begin{example2}{Ex.\ S18/19 Decode intrinsics}
     \texttt{vmulq\_f64}? lanes in \texttt{uint16x4\_t}? \texttt{vmul\_lane\_u16(a,b,L)}?
     \tcblower
     \texttt{vmulq\_f64}: 128-bit lane-wise multiply of \important{2 doubles} $\to$ \texttt{float64x2\_t}. \texttt{uint16x4\_t}: \important{4 lanes}. \texttt{vmul\_lane}: broadcast \texttt{b[L]} to all lanes, multiply by \texttt{a}.
 \end{example2}
 
-\begin{example2}{Ex.\ S20 -- Lab: lanes/iterations}\\
-    Process $K$ elements with NEON -- how many vector ops?
+\begin{example2}{Ex.\ S20 Lab: lanes/iterations}
+    Process $K$ elements with NEON how many vector ops?
     \tcblower
     lanes = vector width / element size; iterations $=\lceil K/\text{lanes}\rceil$. E.g.\ \texttt{uint16x8} $\to \lceil K/8\rceil$ vector ops (+ MAC for the filter).
 \end{example2}
 
 \subsection{MISD / Lockstep}
 
-\begin{concept}{Dependable Computing}\\
+\begin{concept}{Dependable Computing}
     MISD spends \emph{redundant hardware} on reliability, not speed (opposite goal to SIMD/MIMD).
 \end{concept}
 
-\begin{definition}{Lockstep Variants}\\
+\begin{definition}{Lockstep Variants}
     \begin{itemize}
         \item tight: 2 CPUs $0$--$2$ clk apart, compare bus $\to$ RESET (e.g.\ ABS)
         \item loose: async, dissimilar impls + acceptance voting
@@ -83,7 +83,7 @@
     \end{itemize}
 \end{definition}
 
-\begin{example2}{Ex.\ S21--24 -- Real-world MISD}\\
+\begin{example2}{Ex.\ S21--24 Real-world MISD}
     Where do you see lockstep in practice?
     \tcblower
     \important{U96 / Zynq ZU3EG}, $2{\times}$Cortex-R5F in tightly-coupled lockstep.

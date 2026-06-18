@@ -1,0 +1,52 @@
+\documentclass[a4paper, fontsize = 8pt, landscape]{scrartcl}
+\usepackage{../latex-basics/layout_and_colours}
+
+\makeatletter
+\def\input@path{{content/}{content/summary_new/}{content/examples/}}
+\makeatother
+\graphicspath{{images/}{content/images/}{content/summary_new/images/}{content/examples/images/}}
+
+\title{Example}
+\subtitle{how to use the style sheet}
+\author{Jil Zerndt}
+\date{current semester}
+
+\createtitlepagestyle
+\createmainpagestyle
+\begin{document}
+\begin{multicols}{2}
+	\thispagestyle{TitlePageStyle}
+	% title without logo:
+    % \maketitleinfo
+
+    % title with logo:
+    \begin{minipage}{0.05\linewidth}
+        \includegraphics[width=\linewidth]{zhaw-logo.png}
+    \end{minipage}
+    \begin{minipage}{0.94\linewidth}
+        \maketitleinfo
+    \end{minipage}
+
+	\sffamily
+	%\input{00_overview.tex}
+    \raggedcolumns
+    \input{mpc_L1.tex}
+	\raggedcolumns \pagebreak
+	\input{mpc_L2.tex}
+	\raggedcolumns \pagebreak
+	\input{mpc_L3.tex}
+	\raggedcolumns \pagebreak
+	\input{mpc_L4.tex}
+	\raggedcolumns \pagebreak
+	\input{mpc_L5.tex}
+	\raggedcolumns \pagebreak
+	\input{mpc_L6.tex}
+	\raggedcolumns \pagebreak
+	\input{mpc_L7.tex}
+	\raggedcolumns \pagebreak
+	\input{mpc_L8.tex}
+	\raggedcolumns \pagebreak
+	\input{mpc_L9.tex}
+	\raggedcolumns
+\end{multicols}
+\end{document}

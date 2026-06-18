@@ -1,0 +1,349 @@
+\section{L8 GPU Architectures / CUDA / OpenCL}
+
+\begin{concept}{Lernziele (Learning Goals)}
+    \begin{enumerate}
+        \item Compare \textbf{GPU vs CPU} (latency vs throughput) [s4]
+        \item \textbf{Thread $\leftrightarrow$ loop} / kernel structure [s5]
+        \item \textbf{Block \& Grid} organisation [s6--7]
+        \item \textbf{Execution model}: grid $\to$ SM $\to$ warps [s8--9]
+        \item \textbf{Limitations} / best practices [s10--11]
+        \item \textbf{Rendering pipeline} + GPU evolution (fixed $\to$ generic) [s14--20]
+        \item \textbf{OpenCL models} + platform / driver (ICD) [s21--24]
+        \item \textbf{work-item / work-group / NDRange} [s25--26]
+        \item \textbf{Command queue} (issuance vs completion) [s28]
+        \item \textbf{OpenCL memory model} [s30--32]
+        \item \textbf{OpenCL synchronisation} [s33]
+        \item \textbf{AMP recap} / openAMP [s40--44]
+    \end{enumerate}
+\end{concept}
+
+\subsection{LZ1 GPU vs CPU}
+
+\mult{2}
+
+\begin{definition}{Two Philosophies}
+    \begin{itemize}
+        \item \textbf{CPU}: few fat cores, \important{latency}-optimised
+        \item \textbf{GPU}: many simple cores, \important{throughput}-optimised
+        \item both run ``threads of execution''
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Why a GPU Wins}
+    Many identical independent operations $\to$ huge thread count hides memory latency $\to$ high throughput.
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: CPU or GPU?}
+    massive regular data parallelism, latency-tolerant $\to$ \important{GPU}; branchy, sequential, latency-sensitive $\to$ CPU.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ1 When is a GPU better?}
+    When does a GPU beat a CPU, and why?
+    \tcblower
+    When there are many \important{independent identical} operations: the GPU runs thousands of threads and \important{hides latency} by switching between them (throughput). A CPU wins on branchy/sequential, latency-sensitive code.
+\end{example2}
+
+\subsection{LZ2 Thread $\leftrightarrow$ Loop / Kernel}
+
+\mult{2}
+
+\begin{definition}{CUDA Kernel}
+    \begin{itemize}
+        \item CUDA = Nvidia-only C++ extension; ``STMD''
+        \item kernel = prologue / kernel / epilogue
+        \item each loop iteration $\to$ its own \important{thread}
+    \end{itemize}
+\end{definition}
+
+\begin{examplecode}{OpenCL Vector Add}
+\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+__kernel void vadd(__global float* a,
+                   __global float* b,
+                   __global float* c) {
+    int i = get_global_id(0);
+    c[i] = a[i] + b[i]; // one work-item per element
+}
+\end{lstlisting}
+\end{examplecode}
+
+\multend
+
+\begin{KR}{Recipe: Convert a Loop to a Kernel}
+    \paragraph{Drop the loop} one thread per iteration.
+    \paragraph{Index} \texttt{i = blockIdx*blockDim + threadIdx} (CUDA) / \texttt{get\_global\_id(0)} (OpenCL).
+    \paragraph{Guard} \texttt{if (i < N)} the grid may overshoot.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ2 (s27/28) Loop to kernel}
+    Rewrite \texttt{for(i<4096) c[i]=a[i]+b[i];} as a kernel; what replaces the loop?
+    \tcblower
+    See the code box: \texttt{i=get\_global\_id(0); c[i]=a[i]+b[i];}. The \important{index space} (NDRange of 4096) replaces the loop one work-item per element.
+\end{example2}
+
+\subsection{LZ3 Block \& Grid Organisation}
+
+\mult{2}
+
+\begin{definition}{Threads $\to$ Blocks $\to$ Grid}
+    \begin{itemize}
+        \item threads grouped into \textbf{blocks}; blocks into a \textbf{grid}
+        \item must set \#threads/block and \#blocks
+        \item launched via \texttt{<<<grid,block>>>}
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Why Blocks}
+    A block maps a team of threads onto the GPU \important{HW-independently}; \#blocks usually $>$ \#processors.
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Size a CUDA / OpenCL Launch}
+    \paragraph{One thread per element} \#threads = \#elements.
+    \paragraph{Block/grid} \texttt{threadsPerBlock} a multiple of 32; grid $=\lceil$elements/block$\rceil$.
+    \paragraph{Index ranges} \texttt{[R][C]} $\to$ \texttt{threadIdx.x}$\in0..R{-}1$, \texttt{.y}$\in0..C{-}1$.
+    \paragraph{Edge guard} \texttt{if (i<N \&\& j<N)}.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ3 (s6) Threads for [10][5]}
+    Into how many threads does CUDA divide a \texttt{[10][5]} matrix op? Range of the threadID?
+    \tcblower
+    \important{50} threads (10$\times$5). \texttt{threadIdx.x}$\in$\important{0..9}, \texttt{threadIdx.y}$\in$\important{0..4} IDs $(0,0)$ to $(9,4)$.
+\end{example2}
+
+\subsection{LZ4 Execution Model (Grid $\to$ SM $\to$ Warps)}
+
+\mult{2}
+
+\begin{definition}{SM \& Warps}
+    \begin{itemize}
+        \item grid $\to$ GPU; block $\to$ \textbf{SM} (Streaming Multiprocessor)
+        \item warp scheduler runs \important{warps of 32} threads
+    \end{itemize}
+\end{definition}
+
+\begin{definition}{Fermi SM}
+    32 CUDA cores + 4 SFU + 16 L/S units (GF100 = 16 such cores).
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Map a Grid onto HW}
+    grid $\to$ GPU; blocks $\to$ SMs (extra blocks \emph{queued}); within an SM threads run as \important{32-thread warps} scheduled to hide latency.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ4 What is an SM?}
+    What is an SM, how many threads in a warp, and what's in a Fermi SM?
+    \tcblower
+    \important{Streaming Multiprocessor}; a warp = \important{32} threads; Fermi SM = 32 CUDA cores + 4 SFU + 16 load/store units.
+\end{example2}
+
+\subsection{LZ5 Limitations \& Best Practices}
+
+\mult{2}
+
+\begin{concept}{Limits}
+    \begin{itemize}
+        \item available registers
+        \item max active blocks / threads
+        \item shared memory
+        \item warp-scheduler dispatch
+    \end{itemize}
+\end{concept}
+
+\begin{concept}{Best Practices}
+    \begin{itemize}
+        \item threads are \important{cheap}
+        \item equal register use $\to$ pre-estimate executability
+        \item non-active blocks are \important{queued}
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Respect GPU Limits}
+    threadsPerBlock a multiple of 32; keep registers/shared-mem per block within the SM budget; over-subscribe with extra blocks (they queue and run as SMs free).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ5 (s10/11) Multiple of 32?}
+    Why make threads-per-block a multiple of 32? What happens to blocks that don't fit on an SM?
+    \tcblower
+    Warps are \important{32} wide $\to$ a non-multiple wastes lanes. Blocks that don't fit are \important{queued} and run when an SM frees up (threads are cheap, so over-subscribe).
+\end{example2}
+
+\subsection{LZ6 Rendering Pipeline \& GPU Evolution}
+
+\begin{concept}{Fixed-Function $\to$ Generic}
+    GPUs grew out of the \important{fixed-function shading pipeline} (vertex $\to$ raster $\to$ fragment). Unified programmable cores made them \emph{generic} (GPGPU); FUs are still developed for graphics. ``GPUs echo the shading pipeline.''
+\end{concept}
+
+\begin{KR}{Recipe: Place a GPU on the Axis}
+    dedicated per-stage shader hardware $\to$ \emph{fixed-function}; unified programmable cores running arbitrary kernels $\to$ \emph{generic} (GPGPU).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ6 Why generic?}
+    What did GPUs evolve from, and why did they become generic?
+    \tcblower
+    From a \important{fixed-function shading pipeline}. Unifying the shader stages into \important{programmable cores} let the same hardware run arbitrary compute kernels (GPGPU), not just graphics.
+\end{example2}
+
+\subsection{LZ7 OpenCL Models \& Platform}
+
+\mult{2}
+
+\begin{definition}{Four Models}
+    Platform (HW) $\cdot$ Execution (kernels/NDRange) $\cdot$ Memory $\cdot$ Programming (data/task).
+\end{definition}
+
+\begin{definition}{Platform / Driver}
+    Host $\to$ Compute Device $\to$ \textbf{CU} $\to$ \textbf{PE}. The \important{ICD} (installable client driver) loads the right vendor driver.
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Recall the OpenCL Models}
+    Platform = the hardware map; Execution = how kernels run (NDRange); Memory = the 4 regions; Programming = data vs task parallel. ICD = multi-vendor driver loader.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ7 Models \& hierarchy}
+    Name the four OpenCL models and the platform hierarchy.
+    \tcblower
+    \important{Platform / Execution / Memory / Programming}. Hierarchy: \important{Host $\to$ Device $\to$ CU $\to$ PE}; the ICD selects the vendor driver.
+\end{example2}
+
+\subsection{LZ8 Work-item / Work-group / NDRange}
+
+\mult{2}
+
+\begin{definition}{The Three Terms}
+    \begin{itemize}
+        \item \textbf{work-item}: one kernel instance independent + parallel
+        \item \textbf{work-group}: scheduling unit on a CU; shares memory; must share a CU
+        \item \textbf{NDRange}: the index space; kernel runs once per work-item
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{IDs / CUDA map}
+    \begin{itemize}
+        \item \texttt{global\_id} (in NDRange) + \texttt{local\_id} (in group)
+        \item work-item$\leftrightarrow$thread, work-group$\leftrightarrow$block, NDRange$\leftrightarrow$grid
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Lay out an NDRange}
+    NDRange = total work-items (one per data element); split into work-groups (share local memory, run on one CU); index with \texttt{get\_global\_id} / \texttt{get\_local\_id}.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ8 (s26) 4096 work-items}
+    NDRange of 4096 work-items in groups of 512 relate work-item / work-group / NDRange.
+    \tcblower
+    \important{NDRange} = the 4096-index space; it splits into \important{work-groups} of 512 (each scheduled on one CU, sharing local memory); each \important{work-item} is one kernel instance with a \texttt{global\_id} (and a \texttt{local\_id} within its group).
+\end{example2}
+
+\subsection{LZ9 Command Queue}
+
+\begin{definition}{command\_queue}
+    Kernels are enqueued to the device. \important{In-order issuance} by the host; \important{in/out-of-order completion} by the device. The host can insist on in-order completion; otherwise the driver may re-schedule.
+\end{definition}
+
+\begin{KR}{Recipe: Reason about the Queue}
+    Host controls \emph{issue} order; device controls \emph{completion} order (may reorder for efficiency) unless the host forces in-order.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ9 (s28) Who controls ordering?}
+    Who decides the order of issuance, and who the order of completion?
+    \tcblower
+    The \important{host} issues in order; the \important{device/driver} decides completion order (in or out-of-order) unless the host insists on in-order completion.
+\end{example2}
+
+\subsection{LZ10 OpenCL Memory Model}
+
+\mult{2}
+
+\begin{definition}{Four Regions}
+    \begin{itemize}
+        \item \textbf{Global}: all work-items
+        \item \textbf{Constant}: read-only broadcast
+        \item \textbf{Local}: per work-group
+        \item \textbf{Private}: per work-item
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Consistency \& Transfer}
+    \begin{itemize}
+        \item \important{weak} consistency only at sync points (work-group + host)
+        \item host-driven transfer: \texttt{clCreateBuffer} + r/w flags
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Pick a Memory Region}
+    shared by all $\to$ Global; read-only broadcast $\to$ Constant; shared in a work-group $\to$ Local; scratch per work-item $\to$ Private. The host stages data with \texttt{clCreateBuffer}.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ10 Where + how consistent?}
+    Where does a value visible to all work-items live, and what does weak consistency mean here?
+    \tcblower
+    \important{Global} memory. Weak consistency = updates are only guaranteed visible at \important{sync points} (a work-group barrier, or host-level for global) not continuously.
+\end{example2}
+
+\subsection{LZ11 OpenCL Synchronisation}
+
+\begin{definition}{Within a Work-group Only}
+    No sync \emph{between} work-groups only within one.
+    \begin{itemize}
+        \item barriers, memory fences
+        \item atomics: \texttt{atomic\_add/\_load/\_exchange/\_fence}
+        \item mutex built from an atomic
+    \end{itemize}
+\end{definition}
+
+\begin{KR}{Recipe: Synchronise a Kernel}
+    inside a work-group $\to$ barrier / fence / atomics. Across work-groups $\to$ \emph{not possible} in-kernel: split into separate kernels or synchronise at the host.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ11 (s33) Coordinate work-items}
+    Two work-items in the same group need to coordinate; what about two in different groups?
+    \tcblower
+    Same group: \important{barrier / memory fence / atomics}. Different groups: \important{no in-kernel sync} split the work into separate kernels or synchronise at the host.
+\end{example2}
+
+\subsection{LZ12 AMP Recap}
+
+\begin{KR}{Recipe: Set Up AMP (recap)}
+    same ISA $\to$ SMP/big.LITTLE under one OS; \important{different ISA $\to$ separate OS + openAMP} (\texttt{remoteproc} boots the ELF; \texttt{rpmsg}/\texttt{virtio} carry messages). Two IPC methods: shared memory + signalling.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ12 (s40/41) Different ISA under one OS?}
+    Can different-ISA cores run under a single OS? How are they coupled?
+    \tcblower
+    \important{No} one kernel targets one ISA. Couple them with \important{openAMP}: \texttt{remoteproc} + \texttt{rpmsg}/\texttt{virtio} (same as L7).
+\end{example2}
+
+\subsection{Exam FS23 Q4.5: GPU Kernel}
+
+\begin{example2}{Exam FS23 Q4.5 GPU kernel (6P)}
+    Outline a commented GPU kernel for the dot product of every row-vector pair.
+    \tcblower
+\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+// one thread per output cell (i,j)
+__global__ void dot(const int* in, int* out, int N){
+  int j = blockIdx.x*blockDim.x + threadIdx.x; // column
+  int i = blockIdx.y*blockDim.y + threadIdx.y; // row
+  if (i < N && j < N) {              // edge guard
+    long sum = 0;
+    for (int k = 0; k < N; k++)      // MAC loop
+      sum += in[i*N + k] * in[j*N + k];
+    out[i*N + j] = sum;
+  }
+}
+// launch: dim3 block(16,16);
+//         grid((N+15)/16, (N+15)/16);
+\end{lstlisting}
+    The grid replaces the two outer loops; the bounds guard handles the edge case.
+\end{example2}

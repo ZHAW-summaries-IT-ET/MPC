@@ -1,6 +1,6 @@
 \section{L1 Introduction \& Task Decomposition}
 
-\begin{definition}{Vocabulary}\\
+\begin{definition}{Vocabulary}
     Explain Host, Device, CU, PE, FU, UE, task.
     \tcblower
     Host delegates work to a Compute \important{Device}; device = CU(s) $\to$ PE(s) $\to$ FU(s). 
@@ -8,30 +8,30 @@
     %TODO: insert image slide 12 with notes
 \end{definition}
 
-\begin{example2}{Ex.\ S13 -- CB1 / Jetson terminology}\\
-    Programming on the CB1, delegating to the Jetson Nano -- what is what?
+\begin{example2}{Ex.\ S13 CB1 / Jetson terminology}
+    Programming on the CB1, delegating to the Jetson Nano what is what?
     \tcblower
     CB1 = \important{Host}; Nano = \important{Device}; Nano SMs = CUs; CUDA cores = PEs; ALU/FPU = FU; spawned threads = UEs; one Sobel slice = task.
     %TODO: insert translation from markdown
 \end{example2}
 
-\begin{KR}{Recipe: Map Platform $\to$ Terminology}\\
+\begin{KR}{Recipe: Map Platform $\to$ Terminology}
     Host (delegates) $\to$ Device (receives) $\to$ CU $\to$ PE $\to$ FU. UE = process/thread running a task.
 \end{KR}
 
 \subsection{Sobel}
 
-\begin{code}{Sobel Algorithm}\\
+\begin{code}{Sobel Algorithm}
     %TODO: insert image from annotated slides!!
 \end{code}
 
-\begin{formula}{Sobel Operator}\\
+\begin{formula}{Sobel Operator}
     $G_x=\begin{bsmallmatrix}-1&0&+1\\-2&0&+2\\-1&0&+1\end{bsmallmatrix}$,\;
     $G_y=\begin{bsmallmatrix}-1&-2&-1\\0&0&0\\+1&+2&+1\end{bsmallmatrix}$;\;
     $|G|=\sqrt{G_x^2+G_y^2}\to|G_x|+|G_y|$
 \end{formula}
 
-\begin{example2}{How does Sobel work?}\\
+\begin{example2}{How does Sobel work?}
     Determine the edge-detection computation.
     \tcblower
     Two $3\times3$ convolutions $G_x,G_y$ give the gradient; magnitude $|G|=\sqrt{G_x^2+G_y^2}$ \important{simplified} to $|G_x|+|G_y|$, then threshold.
@@ -39,19 +39,19 @@
 
 \subsection{Parallel P}
 
-\begin{KR}{Recipe: Task-Decompose an Algorithm}\\
+\begin{KR}{Recipe: Task-Decompose an Algorithm}
     \textbf{Draw the CFG} nodes = functions/actions; directed edges = data dependency (producer$\to$consumer).
 
     \textbf{Count distinct actions} = number of functional tasks.
 
     \textbf{Find independent tasks} no path between them $\Rightarrow$ may run concurrently.
 
-    \textbf{Try both splittings} functional (by named function, few) vs loop/data (by region, scales -- prefer).
+    \textbf{Try both splittings} functional (by named function, few) vs loop/data (by region, scales prefer).
 
     \textbf{State parallelism + joins} how many overlap, where they synchronise.
 \end{KR}
 
-\begin{KR}{Recipe: Dependency Analysis}\\
+\begin{KR}{Recipe: Dependency Analysis}
     \textbf{Group} tasks sharing data/constraints.
 
     \textbf{Order} add constraint where one consumes another's output (+ ghost-exchange before boundary).
@@ -61,7 +61,7 @@
 
 
 
-\begin{KR}{Recipe: Evaluate a Parallel Design}\\
+\begin{KR}{Recipe: Evaluate a Parallel Design}
     Check: compute $>$ management overhead; \#tasks $\geq$ \#PEs; data dependencies minimal; schedule (static if equal, else dynamic / work-stealing).
 \end{KR}
 
@@ -71,19 +71,19 @@
 
 
 
-\begin{example2}{Ex.\ S22/23/25 -- Pattern language}\\
+\begin{example2}{Ex.\ S22/23/25 Pattern language}
     Name the pattern hierarchy and the Finding-Concurrency patterns.
     \tcblower
     Hierarchy: Finding Concurrency $\to$ Algorithm Structure $\to$ Supporting Structure $\to$ Implementation Mechanisms. Finding Concurrency = \important{Decomposition} (task/data) + \important{Dependency Analysis} (group/order/share).
 \end{example2}
 
-\begin{example2}{Ex.\ S26/27 -- Decompose Sobel}\\
+\begin{example2}{Ex.\ S26/27 Decompose Sobel}
     Split Sobel into tasks; identify parallelism; functional or loop splitting?
     \tcblower
-    6 functional tasks; \texttt{sobel\_x}$\parallel$\texttt{sobel\_y} independent. \important{Both} apply: functional (limited, 2-way), loop splitting (region-split, scalable -- preferred).
+    6 functional tasks; \texttt{sobel\_x}$\parallel$\texttt{sobel\_y} independent. \important{Both} apply: functional (limited, 2-way), loop splitting (region-split, scalable preferred).
 \end{example2}
 
-\begin{example2}{Ex.\ S28/29 -- Read the CFG}\\
+\begin{example2}{Ex.\ S28/29 Read the CFG}
     Distinct actions? Independent tasks? Parallelisation potential? What is a CFG?
     \tcblower
     \important{6} distinct; only \texttt{sobel\_x},\texttt{sobel\_y} independent; functional parallelism limited (2-way), data decomposition scales. CFG = control-flow graph: all execution paths; used by compilers/profilers and to spot concurrency.
@@ -91,25 +91,25 @@
     \includegraphics[width=\linewidth]{sobel_cfg.png}
 \end{example2}
 
-\begin{example2}{Ex.\ S30--33 -- Dependency analysis}\\
+\begin{example2}{Ex.\ S30--33 Dependency analysis}
     Which sub-pattern is most relevant? Group/order/share for Sobel?
     \tcblower
     \important{Data Sharing} is the interesting one. Group: \texttt{sobel\_x/y} (same grey input). Order: \texttt{sobel\_all} after both finish. Share: grey = read-only, kernel = effectively-local, \texttt{Gx/Gy} = read-write, \texttt{sobel\_all} = \important{accumulate}.
 \end{example2}
 
-\begin{example2}{Ex.\ S34--37 -- Evaluate task parallelism}\\
+\begin{example2}{Ex.\ S34--37 Evaluate task parallelism}
     Compute vs management? Tasks vs PEs? Data deps? Schedule/load balancing?
     \tcblower
     Whole-function task justifies a UE (per-pixel doesn't). Want \#tasks $\geq$ \#PEs $\to$ region-split. Only dep is the \texttt{sobel\_all} join. Equal regions $\to$ \important{static}; else dynamic / work-stealing.
 \end{example2}
 
-\begin{example2}{Ex.\ S38/39 -- Fork--Join}\\
+\begin{example2}{Ex.\ S38/39 Fork--Join}
     What is fork-join? When is it suitable?
     \tcblower
     Clone code into concurrent tasks, then \emph{join} (wait). \important{Not} POSIX \texttt{fork()}. Suits recursive/irregular/dynamic task sets; a poor fit for a fixed regular pipeline like Sobel.
 \end{example2}
 
-\begin{example2}{Ex.\ S41--45 -- Process vs Thread}\\
+\begin{example2}{Ex.\ S41--45 Process vs Thread}
     What is a process? How do processes/threads differ?
     \tcblower
     \emph{Process}: running program; resource + scheduling unit; own \texttt{main()}/address space; MPU-isolated; \texttt{fork()} = CoW clone, parent \texttt{wait()}s. \emph{Thread}: inside a process, shares memory, cheap $\to$ reuse via \important{thread pool}.

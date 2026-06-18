@@ -1,6 +1,6 @@
-\section{L2 -- Data Decomposition}
+\section{L2 Data Decomposition}
 
-\begin{KR}{Recipe: Choose \& Size Data Chunks}\\
+\begin{KR}{Recipe: Choose \& Size Data Chunks}
     \textbf{Feasible?} heavy work = data-structure manipulation + similar op applied independently to parts?
     \textbf{Pattern} array + local neighbourhood $\to$ Geometric Decomposition.
     \textbf{Shape} minimise surface/volume $\to$ square tiles (strips only for simplicity).
@@ -8,56 +8,56 @@
     \textbf{Map} \#chunks $>$ \#UEs (Distributed Array) for balancing.
 \end{KR}
 
-\begin{KR}{Recipe: Surface/Volume Comparison}\\
+\begin{KR}{Recipe: Surface/Volume Comparison}
     Volume = cells (computation); Surface = boundary cells (communication). Lower surface/volume wins for equal volume.
 \end{KR}
 
-\begin{KR}{Recipe: SPMD Program}\\
+\begin{KR}{Recipe: SPMD Program}
     Init $\to$ get unique ID/rank $\to$ common code (branch / index by ID) $\to$ distribute data $\to$ collect+combine $\to$ finalise.
 \end{KR}
 
-\begin{formula}{Surface vs Volume}\\
+\begin{formula}{Surface vs Volume}
     equal volume $N^2/4$: square surface $2N$ vs strip $\tfrac{5N}{2}$ $\Rightarrow$ \important{square wins}. $10\times10$: square 25/20, strip 20/25.
 \end{formula}
 
-\begin{example2}{Ex.\ S4--5/9 -- Patterns recap}\\
+\begin{example2}{Ex.\ S4--5/9 Patterns recap}
     What is the data-decomposition path through the patterns?
     \tcblower
     Finding Concurrency (Decomposition + Dependency) $\to$ Algorithm Structure (\important{Geometric Decomposition}) $\to$ Supporting Structure (Distributed Array, SPMD).
 \end{example2}
 
-\begin{example2}{Ex.\ S6--8 -- Feasible for edge detection?}\\
+\begin{example2}{Ex.\ S6--8 Feasible for edge detection?}
     Is data decomposition feasible? Tasks? Granularity boundary cases?
     \tcblower
     \important{Yes}: Sobel over every pixel, kernel needs only a $3\times3$ neighbourhood $\to$ regions independent. Tasks = per-region filters. Largest chunk = whole image (no parallelism); smallest = 1 pixel (overhead dominates).
 \end{example2}
 
-\begin{example2}{Ex.\ S10 -- Group \& order chunks}\\
+\begin{example2}{Ex.\ S10 Group \& order chunks}
     How to group and order the chunk tasks?
     \tcblower
     Group tasks on the same chunk. Order: front pipeline first; \important{ghost-exchange before boundary} updates; \texttt{sobel\_x/y}$\to$\texttt{sobel\_all} join per chunk; interior is embarrassingly parallel.
 \end{example2}
 
-\begin{example2}{Ex.\ S12/13 -- Square vs rectangle}\\
+\begin{example2}{Ex.\ S12/13 Square vs rectangle}
     For a $10\times10$ matrix in 4 chunks, which shape is better and why?
     \tcblower
     Equal volume but square surface $2N <$ strip $\tfrac{5N}{2}$ $\Rightarrow$ \important{square} = more compute per unit communication.
-    % INSERT IMAGE: L2 slide 13 -- surface vs volume sketch
+    % INSERT IMAGE: L2 slide 13 surface vs volume sketch
 \end{example2}
 
-\begin{example2}{Ex.\ S16/17 -- Apply to edge detection}\\
+\begin{example2}{Ex.\ S16/17 Apply to edge detection}
     Task parallelism or geometric? What chunks? Data sharing?
     \tcblower
     \important{Geometric Decomposition}; square tiles (or strips); share a 1-pixel \important{read-only ghost halo}; interior embarrassingly parallel.
 \end{example2}
 
-\begin{example2}{Ex.\ S18--24 -- Distributed Array}\\
+\begin{example2}{Ex.\ S18--24 Distributed Array}
     How are chunks mapped to UEs for load balance?
     \tcblower
     Make \#chunks $>$ \#UEs; assign block-cyclic / round-robin so each UE owns several scattered chunks $\to$ smoother load; localise + halo per UE.
 \end{example2}
 
-\begin{example2}{Ex.\ S27/28 -- SPMD evaluated}\\
+\begin{example2}{Ex.\ S27/28 SPMD evaluated}
     Strengths and limits of SPMD?
     \tcblower
     One maintainable, portable code base; overhead only at start-up/shutdown; aligns with message passing. \important{Limit}: branching into genuinely different per-UE tasks stretches the pattern; needs good data management.

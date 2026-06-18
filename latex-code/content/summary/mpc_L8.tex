@@ -1,17 +1,17 @@
-\section{L8 / 8a -- GPU, CUDA \& OpenCL}
+\section{L8 / 8a GPU, CUDA \& OpenCL}
 
 \subsection{GPU vs CPU \& the CUDA Model}
 
 \mult{2}
 
-\begin{concept}{GPU vs CPU}\\
+\begin{concept}{GPU vs CPU}
     \begin{itemize}
         \item CPU: latency-optimised (few fast threads)
         \item GPU: \important{throughput} (many slow threads)
     \end{itemize}
 \end{concept}
 
-\begin{definition}{CUDA Hierarchy}\\
+\begin{definition}{CUDA Hierarchy}
     \begin{itemize}
         \item kernel $\to$ thread (1/element)
         \item threads $\to$ block $\to$ grid
@@ -21,24 +21,24 @@
 
 \multend
 
-\begin{definition}{SM (Streaming Multiprocessor)}\\
+\begin{definition}{SM (Streaming Multiprocessor)}
     HW unit a block runs on. Fermi SM: 32 cores, 4 SFU, 16 L/S, 64KB shared/L1, warp scheduler. Grid of blocks distributed across SMs.
     % INSERT IMAGE: L8 slide 7 (grid/blocks) + slide 9 (Fermi SM)
 \end{definition}
 
-\begin{KR}{Recipe: Size a CUDA / OpenCL Launch}\\
+\begin{KR}{Recipe: Size a CUDA / OpenCL Launch}
     \textbf{One thread per element} \#threads = \#elements.
     \textbf{Block/grid} \texttt{threadsPerBlock} multiple of 32; grid $=\lceil$elements/block$\rceil$.
     \textbf{Index ranges} \texttt{[R][C]} $\to$ \texttt{threadIdx.x}$\in0..R{-}1$, \texttt{.y}$\in0..C{-}1$.
 \end{KR}
 
-\begin{example2}{Ex.\ S4--7 -- GPU vs CPU \& thread count}\\
+\begin{example2}{Ex.\ S4--7 GPU vs CPU \& thread count}
     How do GPU/CPU differ? Threads for a $[10][5]$ op? threadID range?
     \tcblower
     CPU latency- vs GPU throughput-optimised. \important{$10\times5=50$ threads}; \texttt{threadIdx.x}$\in0..9$, \texttt{.y}$\in0..4$ (IDs $(0,0)..(9,4)$).
 \end{example2}
 
-\begin{example2}{Ex.\ S8--11 -- SM \& limitations}\\
+\begin{example2}{Ex.\ S8--11 SM \& limitations}
     What is an SM? Why not one fine thread for everything?
     \tcblower
     SM = unit a block runs on (warps of 32). Limits: branch divergence serialises a warp, memory coalescing matters, too-fine work wastes scheduling.
@@ -46,12 +46,12 @@
 
 \subsection{Rendering Pipeline}
 
-\begin{concept}{Stages}\\
+\begin{concept}{Stages}
     world coords $\to$ vertex shader $\to$ assembly $\to$ (geometry) $\to$ rasterise $\to$ fragment shader (per pixel) $\to$ blend. Mali: Utgard (tiling) $\to$ Midgard (OpenCL).
-    % INSERT IMAGE: L8 slide 14 -- rendering pipeline
+    % INSERT IMAGE: L8 slide 14 rendering pipeline
 \end{concept}
 
-\begin{example2}{Ex.\ S14/15 -- Why so parallel?}\\
+\begin{example2}{Ex.\ S14/15 Why so parallel?}
     Why is rendering massively parallel?
     \tcblower
     Data \important{expands} from a few vertices to millions of pixels $\to$ per-pixel work is independent and huge.
@@ -61,7 +61,7 @@
 
 \mult{2}
 
-\begin{definition}{Four Models}\\
+\begin{definition}{Four Models}
     \begin{itemize}
         \item Platform (Host$\to$Device$\to$CU$\to$PE)
         \item Execution (work-item/group/NDRange)
@@ -70,7 +70,7 @@
     \end{itemize}
 \end{definition}
 
-\begin{definition}{Memory Regions}\\
+\begin{definition}{Memory Regions}
     \begin{itemize}
         \item Global, Constant
         \item Local (per work-group)
@@ -80,11 +80,11 @@
 
 \multend
 
-\begin{KR}{Recipe: Convert a Loop to a Kernel}\\
+\begin{KR}{Recipe: Convert a Loop to a Kernel}
     drop the loop $\to$ \texttt{i=get\_global\_id(0)} $\to$ body on element \texttt{i}; work-items independent.
 \end{KR}
 
-\begin{examplecode}{OpenCL Vector Add}\\
+\begin{examplecode}{OpenCL Vector Add}
 \begin{lstlisting}[language=C, style=basesmol]
 __kernel void vadd(__global float* a,
                    __global float* b,
@@ -95,13 +95,13 @@ __kernel void vadd(__global float* a,
 \end{lstlisting}
 \end{examplecode}
 
-\begin{example2}{Ex.\ S27/28 -- Loop $\to$ kernel}\\
+\begin{example2}{Ex.\ S27/28 Loop $\to$ kernel}
     Rewrite \texttt{for(i<4096) c[i]=a[i]+b[i];} and give the NDRange.
     \tcblower
     See code box. NDRange = 4096 work-items (e.g.\ group 512); the loop is replaced by the index space.
 \end{example2}
 
-\begin{example2}{Ex.\ S21--26/31--33 -- Models \& sync}\\
+\begin{example2}{Ex.\ S21--26/31--33 Models \& sync}
     Name the four models; where can you synchronise?
     \tcblower
     Platform/Execution/Memory/Programming. Sync \important{only within a work-group} (barrier, fence, atomics); host enqueues in order, completion in/out-of-order.
@@ -109,14 +109,14 @@ __kernel void vadd(__global float* a,
 
 \subsection{GPU Scheduling}
 
-\begin{concept}{Coarse vs Fine}\\
+\begin{concept}{Coarse vs Fine}
     \begin{itemize}
         \item coarse: blocks $\to$ SMs
         \item fine: warp scheduler interleaves 32-thread warps to \important{hide latency}
     \end{itemize}
 \end{concept}
 
-\begin{example2}{Ex.\ S29 -- Why interleave warps?}\\
+\begin{example2}{Ex.\ S29 Why interleave warps?}
     Why does the warp scheduler interleave?
     \tcblower
     When one warp stalls on memory, another ready warp runs $\to$ execution units stay busy (latency hiding).
@@ -124,7 +124,7 @@ __kernel void vadd(__global float* a,
 
 \subsection{AMP Recap}
 
-\begin{example2}{Ex.\ S40/41 -- Different ISA under one OS?}\\
+\begin{example2}{Ex.\ S40/41 Different ISA under one OS?}
     \tcblower
-    \important{No} -- separate OSes coupled by openAMP (\texttt{remoteproc} + \texttt{rpmsg}/\texttt{virtio}). Same as L7.
+    \important{No} separate OSes coupled by openAMP (\texttt{remoteproc} + \texttt{rpmsg}/\texttt{virtio}). Same as L7.
 \end{example2}

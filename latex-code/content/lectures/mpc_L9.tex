@@ -1,68 +1,68 @@
-\section{L9 -- MPI (Message Passing Interface)}
+\section{L9 MPI (Message Passing Interface)}
 
-\begin{KR}{Recipe: Write an MPI Program}\\
+\begin{KR}{Recipe: Write an MPI Program}
     \texttt{Init} $\to$ \texttt{Comm\_size}/\texttt{Comm\_rank} $\to$ branch by rank (SPMD) $\to$ \texttt{Send}/\texttt{Recv} or collectives $\to$ \texttt{Finalize}. Build \texttt{mpicc}, run \texttt{mpirun -n X}.
 \end{KR}
 
-\begin{KR}{Recipe: Choose a Send Mode}\\
+\begin{KR}{Recipe: Choose a Send Mode}
     guaranteed rendezvous $\to$ \texttt{Ssend}; decouple sender $\to$ \texttt{Bsend}; recv already posted $\to$ \texttt{Rsend}; else \texttt{Send}; overlap $\to$ \texttt{Isend}/\texttt{Irecv}+\texttt{Wait}/\texttt{Test}.
 \end{KR}
 
-\begin{KR}{Recipe: Pick a Collective}\\
+\begin{KR}{Recipe: Pick a Collective}
     same data to all $\to$ \texttt{Bcast}; split out $\to$ \texttt{Scatter}; bring back $\to$ \texttt{Gather}; combine $\to$ \texttt{Reduce}/\texttt{Allreduce}; phase wall $\to$ \texttt{Barrier}.
 \end{KR}
 
-\begin{example2}{Ex.\ S2/6 -- Distributed architectures}\\
+\begin{example2}{Ex.\ S2/6 Distributed architectures}
     Tightly vs loosely bound? Why MPI?
     \tcblower
     Tight = shared memory over interconnect; \important{loose = distributed memory} (MPI's home: SPMD$\to$MIMD). Protocols rise: variable $\to$ scatter-gather $\to$ RPC $\to$ distributed objects.
 \end{example2}
 
-\begin{example2}{Ex.\ S7--10 -- MPI basics}\\
+\begin{example2}{Ex.\ S7--10 MPI basics}
     Six fundamental operations? What is a communicator/rank?
     \tcblower
     \texttt{Init},\texttt{Comm\_size},\texttt{Comm\_rank},\texttt{Send},\texttt{Recv},\texttt{Finalize}. Communicator (\texttt{MPI\_COMM\_WORLD}) groups processes; each has a unique \important{rank} used to branch/index.
 \end{example2}
 
-\begin{example2}{Ex.\ S11--13 -- Build \& run}\\
+\begin{example2}{Ex.\ S11--13 Build \& run}
     How to compile/launch SPMD vs MIMD?
     \tcblower
     \texttt{mpicc} (gcc wrapper). SPMD: \texttt{mpirun -n X ./p} (X$>$cores = oversubscribe). MIMD: \texttt{mpirun -n 2 p1 : -n 2 p2}. Cluster: ssh + hostfile; bind \texttt{--cpu-set}.
 \end{example2}
 
-\begin{example2}{Ex.\ S14 -- Blocking vs non-blocking}\\
+\begin{example2}{Ex.\ S14 Blocking vs non-blocking}
     Difference, and why it matters?
     \tcblower
     \texttt{Send}/\texttt{Recv} block until buffer empty / data in. \texttt{Isend}/\texttt{Irecv} return immediately $\to$ \texttt{Wait}/\texttt{Test} (overlap compute + comms). Communication \emph{is} the synchronisation.
 \end{example2}
 
-\begin{example2}{Ex.\ S15/16 -- Four send modes}\\
+\begin{example2}{Ex.\ S15/16 Four send modes}
     Name the four blocking send modes.
     \tcblower
     \important{Standard} (\texttt{Send}) $\cdot$ \important{Synchronous} (\texttt{Ssend}, safest) $\cdot$ \important{Buffered} (\texttt{Bsend}, app buffer) $\cdot$ \important{Ready} (\texttt{Rsend}, lowest overhead, recv pre-posted).
 \end{example2}
 
-\begin{example2}{Ex.\ S17--19 -- Message anatomy}\\
+\begin{example2}{Ex.\ S17--19 Message anatomy}
     What's in a message? Derived datatypes?
     \tcblower
     \emph{Envelope} (source, dest, communicator, tag) + \emph{Body} (count, datatype, buffer). Standard types \texttt{MPI\_INT/FLOAT/...}; build structs via \texttt{MPI\_Type\_create\_struct}.
 \end{example2}
 
-\begin{example2}{Ex.\ S20 -- Collectives}\\
+\begin{example2}{Ex.\ S20 Collectives}
     Explain broadcast / scatter / gather.
     \tcblower
     \texttt{Bcast}: root$\to$all (tree). \texttt{Scatter}: chunks out to each. \texttt{Gather}: chunks back to root. Map to Distributed Array / Geometric Decomposition.
-    % INSERT IMAGE: L9 slide 20 -- collectives diagram
+    % INSERT IMAGE: L9 slide 20 collectives diagram
 \end{example2}
 
-\begin{example2}{Ex.\ S21 -- Reduction}\\
+\begin{example2}{Ex.\ S21 Reduction}
     Where have we seen reduction? What does \texttt{MPI\_Reduce} do?
     \tcblower
     OpenMP \texttt{reduction} (L3) and accumulate sharing (L1--2). \important{\texttt{MPI\_Reduce(send,recv,count,type,op,root,comm)}} combines element-wise across procs (\texttt{SUM/MAX/MIN/PROD/...}); \texttt{Allreduce} $\to$ all.
 \end{example2}
 
-\begin{example2}{Ex.\ -- Pick a send mode}\\
-    Must be sure the receiver has started before continuing -- which send?
+\begin{example2}{Ex.\ Pick a send mode}
+    Must be sure the receiver has started before continuing which send?
     \tcblower
     \important{\texttt{MPI\_Ssend}} (synchronous): completes only once the matching receive has begun.
 \end{example2}

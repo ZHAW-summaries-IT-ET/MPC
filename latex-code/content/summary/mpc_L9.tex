@@ -1,8 +1,8 @@
-\section{L9 -- MPI (Message Passing Interface)}
+\section{L9 MPI (Message Passing Interface)}
 
 \subsection{Distributed Architectures}
 
-\begin{concept}{Tight vs Loose Binding}\\
+\begin{concept}{Tight vs Loose Binding}
     \begin{itemize}
         \item tight: shared memory over interconnect
         \item \important{loose}: distributed memory (MPI's home, SPMD$\to$MIMD)
@@ -10,7 +10,7 @@
     Protocols rise: variable $\to$ scatter-gather $\to$ RPC $\to$ distributed objects.
 \end{concept}
 
-\begin{example2}{Ex.\ S2/6 -- Why MPI?}\\
+\begin{example2}{Ex.\ S2/6 Why MPI?}
     What kind of system does MPI target?
     \tcblower
     \important{Distributed memory}: independent processes cooperate only by messages; communication \emph{is} synchronisation.
@@ -20,7 +20,7 @@
 
 \mult{2}
 
-\begin{definition}{Six Core Ops}\\
+\begin{definition}{Six Core Ops}
     \begin{itemize}
         \item \texttt{Init}, \texttt{Finalize}
         \item \texttt{Comm\_size}, \texttt{Comm\_rank}
@@ -28,17 +28,17 @@
     \end{itemize}
 \end{definition}
 
-\begin{definition}{Communicator \& Rank}\\
+\begin{definition}{Communicator \& Rank}
     \texttt{MPI\_COMM\_WORLD} groups processes; each has a unique \textbf{rank} used (SPMD) to branch and pick its data.
 \end{definition}
 
 \multend
 
-\begin{KR}{Recipe: Write an MPI Program}\\
+\begin{KR}{Recipe: Write an MPI Program}
     \texttt{Init} $\to$ \texttt{Comm\_size}/\texttt{Comm\_rank} $\to$ branch by rank $\to$ \texttt{Send}/\texttt{Recv} or collectives $\to$ \texttt{Finalize}. Build \texttt{mpicc}, run \texttt{mpirun -n X}.
 \end{KR}
 
-\begin{example2}{Ex.\ S7--13 -- Basics \& launch}\\
+\begin{example2}{Ex.\ S7--13 Basics \& launch}
     Six ops? Communicator/rank? SPMD vs MIMD launch?
     \tcblower
     See defs. SPMD: \texttt{mpirun -n X ./p} (X$>$cores = oversubscribe). MIMD: \texttt{mpirun -n 2 p1 : -n 2 p2}. Bind \texttt{--cpu-set}.
@@ -46,27 +46,27 @@
 
 \subsection{Point-to-Point Communication}
 
-\begin{concept}{Blocking vs Non-blocking}\\
+\begin{concept}{Blocking vs Non-blocking}
     \begin{itemize}
         \item \texttt{Send}/\texttt{Recv}: block until buffer empty / data in
         \item \texttt{Isend}/\texttt{Irecv}: return immediately $\to$ \texttt{Wait}/\texttt{Test} (overlap)
     \end{itemize}
 \end{concept}
 
-\begin{definition}{Four Send Modes}\\
+\begin{definition}{Four Send Modes}
     \begin{itemize}
         \item \textbf{Standard} (\texttt{Send})
-        \item \textbf{Synchronous} (\texttt{Ssend}) -- safest, waits for recv
-        \item \textbf{Buffered} (\texttt{Bsend}) -- app buffer, decoupled
-        \item \textbf{Ready} (\texttt{Rsend}) -- lowest overhead, recv pre-posted
+        \item \textbf{Synchronous} (\texttt{Ssend}) safest, waits for recv
+        \item \textbf{Buffered} (\texttt{Bsend}) app buffer, decoupled
+        \item \textbf{Ready} (\texttt{Rsend}) lowest overhead, recv pre-posted
     \end{itemize}
 \end{definition}
 
-\begin{KR}{Recipe: Choose a Send Mode}\\
+\begin{KR}{Recipe: Choose a Send Mode}
     rendezvous $\to$ \texttt{Ssend}; decouple $\to$ \texttt{Bsend}; recv posted $\to$ \texttt{Rsend}; else \texttt{Send}; overlap $\to$ \texttt{Isend}/\texttt{Irecv}.
 \end{KR}
 
-\begin{example2}{Ex.\ S14--16 -- Blocking \& modes}\\
+\begin{example2}{Ex.\ S14--16 Blocking \& modes}
     Blocking vs non-blocking? Which send guarantees the receiver started?
     \tcblower
     Blocking waits on the buffer; non-blocking returns + \texttt{Wait}/\texttt{Test}. \important{\texttt{Ssend}} completes only once the matching receive begins.
@@ -74,11 +74,11 @@
 
 \subsection{Messages \& Datatypes}
 
-\begin{definition}{Message Anatomy}\\
+\begin{definition}{Message Anatomy}
     \textbf{Envelope} (source, dest, communicator, tag) + \textbf{Body} (count, datatype, buffer). Derived types via \texttt{MPI\_Type\_create\_struct}.
 \end{definition}
 
-\begin{example2}{Ex.\ S17--19 -- Message structure}\\
+\begin{example2}{Ex.\ S17--19 Message structure}
     What's in an MPI message? Why standard datatypes?
     \tcblower
     Envelope + body. Standard types (\texttt{MPI\_INT/FLOAT/...}) so both ends interpret bytes identically across heterogeneous nodes.
@@ -86,21 +86,21 @@
 
 \subsection{Collectives \& Reduction}
 
-\begin{definition}{Collectives}\\
+\begin{definition}{Collectives}
     \begin{itemize}
         \item \texttt{Bcast}: root$\to$all (tree)
         \item \texttt{Scatter}/\texttt{Gather}: chunks out/back
         \item \texttt{Reduce}/\texttt{Allreduce}: combine
         \item \texttt{Barrier}
     \end{itemize}
-    % INSERT IMAGE: L9 slide 20 -- collectives diagram
+    % INSERT IMAGE: L9 slide 20 collectives diagram
 \end{definition}
 
-\begin{KR}{Recipe: Distributed Reduction}\\
+\begin{KR}{Recipe: Distributed Reduction}
     each process holds a partial $\to$ pick op (\texttt{SUM/MAX/MIN/...}) $\to$ \texttt{MPI\_Reduce(send,recv,count,type,op,root,comm)} (element-wise); \texttt{Allreduce} $\to$ all.
 \end{KR}
 
-\begin{example2}{Ex.\ S20/21 -- Collectives \& reduction}\\
+\begin{example2}{Ex.\ S20/21 Collectives \& reduction}
     Explain bcast/scatter/gather. Where have we seen reduction?
     \tcblower
     Bcast = root$\to$all; scatter = out; gather = back. Reduction: OpenMP \texttt{reduction} (L3) + accumulate (L1-2); \important{\texttt{MPI\_Reduce}} = distributed version, element-wise across procs.

@@ -1,0 +1,214 @@
+\section{L5 Operating Systems}
+
+\begin{concept}{Lernziele (Learning Goals)}
+    \begin{enumerate}
+        \item Explain the \textbf{process concept} and its ramifications on the OS [s6]
+        \item Explain \textbf{multiprocessor scheduling \& load balancing} (SQMS/MQMS/work-stealing, cache affinity) [s3--5/9]
+        \item Explain the \textbf{three RT schedulers} (FIFO / RR / DEADLINE) [s7]
+        \item Explain the \textbf{three scheduler categories} (RT / fair / low) [s8]
+        \item Use \textbf{Amdahl's Law} to predict speed-up [s10]
+        \item Explain \textbf{critical sections} \& synchronisation [s11]
+        \item Explain \textbf{TAS vs TTAS} [s12--13]
+    \end{enumerate}
+\end{concept}
+
+\subsection{LZ1 The Process Concept}
+
+\mult{2}
+
+\begin{definition}{Process (OS view)}
+    \begin{itemize}
+        \item unit of \emph{resource ownership} (POSIX)
+        \item HW/SW separation via the \important{MPU}
+        \item scheduler does time-sharing + load-balancing
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Linux: everything is a task}
+    \begin{itemize}
+        \item processes, threads, kernel threads
+        \item multi-policy scheduler: \emph{RT} or \emph{normal}
+        \item processes interact $\to$ share data + ensure consistency
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: OS Implications of a Process}
+    \paragraph{Ownership} resources isolated $\to$ enforced by the MPU.
+    \paragraph{Scheduling} time-shared + load-balanced by the OS.
+    \paragraph{Interaction} sharing needs IPC + consistency (synchronisation).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ1 Why an MPU and a scheduler?}
+    What does the OS need to support processes, and what are the two policy classes?
+    \tcblower
+    The \important{MPU} enforces resource separation (isolation); the \important{scheduler} time-shares + load-balances. Policies = \important{RT} and \important{normal}.
+\end{example2}
+
+\subsection{LZ2 MP Scheduling \& Load Balancing}
+
+\mult{2}
+
+\begin{definition}{SQMS vs MQMS}
+    \begin{itemize}
+        \item \textbf{SQMS}: 1 shared queue cache reload on migration, doesn't scale
+        \item \textbf{MQMS}: per-CPU queue prevents lock/cache contention, \important{cache affinity}, but load-imbalance
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Fixing Imbalance}
+    \begin{itemize}
+        \item \textbf{migration}: move tasks (partial affinity)
+        \item \textbf{work-stealing}: idle queue takes from a busy one
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Balance Multiprocessor Load}
+    need cache affinity $\to$ MQMS (per-CPU queue); imbalance appears $\to$ migrate or \emph{work-steal}; keep tasks on their CPU to preserve warm caches.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ2 Imbalanced MQMS}
+    CPU0 runs heavy task A while B and D share CPU1; then A finishes. What's the problem and the fix?
+    \tcblower
+    \important{Load imbalance}: CPU0 goes idle while B/D still cramped on CPU1. Fix with \important{migration} (move B or D over) or \important{work-stealing} (idle CPU0 takes from CPU1's queue).
+\end{example2}
+
+\subsection{LZ3 The Three RT Schedulers}
+
+\begin{definition}{RT Schedulers}
+    \begin{itemize}
+        \item \texttt{SCHED\_FIFO}: high-prio, run-to-completion (prio 1--99)
+        \item \texttt{SCHED\_RR}: high-prio, time-sliced (prio 1--99)
+        \item \texttt{SCHED\_DEADLINE}: earliest-deadline-first; can be pinned / bypass balancing
+    \end{itemize}
+\end{definition}
+
+\begin{KR}{Recipe: Pick an RT Scheduler}
+    run-to-completion $\to$ \texttt{FIFO}; fair time-slice among equal priority $\to$ \texttt{RR}; explicit per-job deadline $\to$ \texttt{DEADLINE}.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ3 FIFO or RR?}
+    Two equal-priority RT threads must share the CPU fairly. Which scheduler?
+    \tcblower
+    \important{\texttt{SCHED\_RR}} time-slices equal-priority threads. \texttt{FIFO} would let the first run to completion before the second starts.
+\end{example2}
+
+\subsection{LZ4 The Three Scheduler Categories}
+
+\mult{2}
+
+\begin{definition}{Categories}
+    \begin{itemize}
+        \item \textbf{RT}: \texttt{FIFO}/\texttt{RR}/\texttt{DEADLINE}
+        \item \textbf{Fair}: \texttt{SCHED\_OTHER} = EEVDF ($\leftarrow$CFS$\leftarrow$O(1)$\leftarrow$O(n)), \texttt{nice}, red-black tree
+        \item \textbf{Low}: \texttt{BATCH} / \texttt{IDLE}
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Design Goals}
+    \begin{itemize}
+        \item RT: N highest-prio RT tasks run (N = \#CPUs)
+        \item OTHER: resource \emph{utilisation} offload busy $\to$ idle CPUs
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Classify a Scheduler}
+    strict priority $\to$ RT; fairness (nice, RB-tree) $\to$ \texttt{OTHER}/EEVDF; background $\to$ \texttt{BATCH}/\texttt{IDLE}.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ4 Which category?}
+    Which scheduler maintains fairness using a self-balancing red-black tree and the \texttt{nice} value? What is its design goal?
+    \tcblower
+    \important{\texttt{SCHED\_OTHER}} (EEVDF/CFS) goal is resource \important{utilisation} (offloading busy CPUs to idle ones).
+\end{example2}
+
+\subsection{LZ5 Amdahl's Law}
+
+\begin{formula}{Amdahl's Law}
+    fraction $p$ parallelisable on $N$ processors:
+    $$S(N)=\frac{1}{(1-p)+\tfrac{p}{N}},\qquad S_{\max}=\frac{1}{1-p}$$
+    Max may not be reached due to \emph{cache coherence} + \emph{synchronisation} overhead.
+    % INSERT IMAGE: L5 slide 10 Amdahl curves
+\end{formula}
+
+\begin{KR}{Recipe: Apply Amdahl's Law}
+    Find $p$ (parallel fraction) $\to$ $S(N)=\tfrac{1}{(1-p)+p/N}$ $\to$ ceiling $S_{\max}=\tfrac{1}{1-p}$ ($N\to\infty$).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ5 Worked}
+    $p=0.9$ on 8 cores: speed-up? maximum? why might you not reach it?
+    \tcblower
+    $S(8)=\tfrac{1}{0.1+0.9/8}=\tfrac{1}{0.2125}\approx{}$ \important{$4.7\times$}; $S_{\max}=\tfrac{1}{0.1}={}$ \important{$10\times$}. Not reached due to \important{cache-coherence} traffic + \important{synchronisation} overhead.
+\end{example2}
+
+\subsection{LZ6 Critical Sections \& Synchronisation}
+
+\mult{2}
+
+\begin{definition}{Critical Section}
+    RW-shared data needing protection for consistency. Entry must be \important{atomic} (one task inside at a time).
+\end{definition}
+
+\begin{concept}{Atomic-Entry Mechanisms}
+    \begin{itemize}
+        \item disable interrupts/scheduler
+        \item ISA atomic instruction
+        \item software: Peterson / spinlock (busy-wait)
+        \item language: Java \texttt{synchronized}
+        \item OS: mutex/semaphore (\important{blocks}, no spin)
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Protect a Critical Section}
+    short wait + spare core $\to$ spinlock/ISA atomic; long wait / oversubscribed $\to$ OS mutex/semaphore (blocks, frees the CPU).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ6 Protect a shared balance}
+    Two processes update a shared bank balance. What is the protected region called? Give a blocking and a spinning way.
+    \tcblower
+    A \important{critical section}. Blocking: OS \important{mutex/semaphore} (thread blocks). Spinning: \important{Peterson/spinlock} or an ISA atomic (busy-wait).
+\end{example2}
+
+\subsection{LZ7 TAS vs TTAS}
+
+\begin{definition}{Test-and-Set}
+    Atomic instruction (e.g.\ \texttt{XCHG}) writes 1 and returns the old value in one step; spinlocks loop on it. \important{Slow}: every attempt locks the bus + invalidates the line.
+\end{definition}
+
+\begin{code}{TTAS spinlock}
+\begin{lstlisting}[language=C, style=basesmol, aboveskip=-0.05\baselineskip, belowskip=-0.5\baselineskip]
+// Test-and-Test-and-Set: read first, then atomic write
+do {
+  while (locked == true) ;   // spin on a cached READ (cheap)
+} while ( TestAndSet(locked) ); // atomic only when it looks free
+\end{lstlisting}
+\end{code}
+
+\begin{KR}{Recipe: Build a Spinlock}
+    \texttt{TAS} = atomic swap in a loop (bus-heavy). Prefer \texttt{TTAS}: spin on a plain read, do the atomic write \emph{only} when the lock looks free $\to$ far less coherence traffic, closer to ideal.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ7 Why TTAS?}
+    Why is TTAS faster than TAS under contention?
+    \tcblower
+    TAS spins with atomic \emph{writes} $\to$ each attempt locks the bus + invalidates the line. TTAS spins on a cached \emph{read}, writing only when free $\to$ \important{far less bus/coherence traffic}.
+\end{example2}
+
+\begin{remark}
+    \textbf{Method: Modelling (be aware of)} \important{Petri nets}: places, transitions and tokens for modelling concurrent/synchronised systems [s14].
+\end{remark}
+
+\subsection{Exam FS23 Scheduler Choice}
+
+\begin{example2}{Exam FS23 Q3.4 Scheduler on the cores (6P)}
+    Sobel, 4-core SMP, at least 6 chunks, streamed images. Choose a scheduler; state assumptions.
+    \tcblower
+    \important{Assumptions}: equal chunk size, CPU-bound, soft-real-time stream. 6 chunks on 4 cores $\Rightarrow$ uneven last round, so use \important{dynamic} load balancing (or make \#chunks a multiple of 4). For a per-frame deadline use an \important{RT} policy (\texttt{SCHED\_FIFO}/\texttt{RR}) with threads \emph{pinned} to cores (affinity); otherwise \texttt{SCHED\_OTHER} suffices. Coherence: chunk count $>$ cores enables the balancing.
+\end{example2}

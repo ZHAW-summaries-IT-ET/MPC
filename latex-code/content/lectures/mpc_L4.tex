@@ -1,38 +1,38 @@
-\section{L4 -- SIMD (Flynn, NEON, MISD)}
+\section{L4 SIMD (Flynn, NEON, MISD)}
 
-\begin{KR}{Recipe: Decode a NEON Intrinsic}\\
+\begin{KR}{Recipe: Decode a NEON Intrinsic}
     Pattern \texttt{v <op> q? \_ <type>}: \emph{op} = operation; \emph{q} present $\Rightarrow$ 128-bit Q else 64-bit D; \emph{type} \texttt{<base><bits>x<count>\_t} $\to$ \emph{count} = lanes. Lanes $=\tfrac{\text{reg width}}{\text{lane bits}}$.
 \end{KR}
 
-\begin{KR}{Recipe: Classify with Flynn}\\
+\begin{KR}{Recipe: Classify with Flynn}
     instruction streams $\times$ data streams: 1/1 SISD, 1/many SIMD, many/1 MISD, many/many MIMD.
 \end{KR}
 
-\begin{example2}{Ex.\ S6/9 -- SPMD pattern}\\
+\begin{example2}{Ex.\ S6/9 SPMD pattern}
     What is SPMD and why is it here?
     \tcblower
     One program per UE, unique ID, branch/index by ID. It is the software generalisation of \important{SIMD} (same instruction, different data).
 \end{example2}
 
-\begin{example2}{Ex.\ S10/17 -- SIMD motivation \& NEON}\\
+\begin{example2}{Ex.\ S10/17 SIMD motivation \& NEON}
     Why vectorise? What is NEON?
     \tcblower
     One instruction processes many lanes $\to$ throughput. NEON = ARM SIMD; \important{Q}=128-bit ($2{\times}64$/$4{\times}32$/$8{\times}16$/$16{\times}8$), \important{D}=64-bit; built on \important{MAC}, no divide.
 \end{example2}
 
-\begin{example2}{Ex.\ S18/19 -- Decode intrinsics}\\
+\begin{example2}{Ex.\ S18/19 Decode intrinsics}
     \texttt{vmulq\_f64}? lanes in \texttt{uint16x4\_t}? \texttt{vmul\_lane\_u16(a,b,L)}?
     \tcblower
     \texttt{vmulq\_f64}: 128-bit lane-wise multiply of \important{2 doubles} $\to$ \texttt{float64x2\_t}. \texttt{uint16x4\_t}: \important{4 lanes}. \texttt{vmul\_lane}: broadcast \texttt{b[L]} to all lanes, multiply by \texttt{a}.
 \end{example2}
 
-\begin{example2}{Ex.\ S20 -- Lab scenario (calculate)}\\
+\begin{example2}{Ex.\ S20 Lab scenario (calculate)}
     Filtering with NEON: how many lanes/iterations to process $K$ elements?
     \tcblower
     Lanes per op = vector width / element size; iterations $=\lceil K/\text{lanes}\rceil$. E.g.\ \texttt{uint16x8} on $K$ pixels $\to \lceil K/8\rceil$ vector ops (+ MAC for the filter).
 \end{example2}
 
-\begin{example2}{Ex.\ S21--24 -- MISD / lockstep}\\
+\begin{example2}{Ex.\ S21--24 MISD / lockstep}
     What is MISD? Real-world example?
     \tcblower
     Many instructions on one data stream, for \important{dependability} not speed. \important{U96 / Zynq ZU3EG} $2{\times}$Cortex-R5F lockstep: compare bus $\to$ RESET on mismatch (e.g.\ ABS). Loose = dissimilar impls + acceptance voting; \emph{2oo3} tolerates one fault.

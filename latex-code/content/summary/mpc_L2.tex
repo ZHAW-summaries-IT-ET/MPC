@@ -1,14 +1,14 @@
-\section{L2 -- Data Decomposition}
+\section{L2 Data Decomposition}
 
 \subsection{Data Decomposition}
 
 \mult{2}
 
-\begin{definition}{Data Decomposition}\\
+\begin{definition}{Data Decomposition}
     Split the \emph{data structure} (image array) into chunks updated independently. Scales with \#chunks.
 \end{definition}
 
-\begin{concept}{Granularity}\\
+\begin{concept}{Granularity}
     \begin{itemize}
         \item big chunk: low parallelism, low overhead
         \item small chunk: high parallelism, high overhead + all-boundary
@@ -18,7 +18,7 @@
 
 \multend
 
-\begin{KR}{Recipe: Choose \& Size Data Chunks}\\
+\begin{KR}{Recipe: Choose \& Size Data Chunks}
     \textbf{Feasible?} heavy work = data-structure manipulation + similar op applied independently?
     \textbf{Pattern} array + local neighbourhood $\to$ Geometric Decomposition.
     \textbf{Shape} minimise surface/volume $\to$ square tiles.
@@ -26,7 +26,7 @@
     \textbf{Map} \#chunks $>$ \#UEs for balancing.
 \end{KR}
 
-\begin{example2}{Ex.\ S6--8 -- Feasible for edge detection?}\\
+\begin{example2}{Ex.\ S6--8 Feasible for edge detection?}
     Is data decomposition feasible? Tasks? Granularity boundaries?
     \tcblower
     \important{Yes}: Sobel over every pixel, kernel needs only a $3\times3$ neighbourhood $\to$ regions independent. Tasks = per-region filters. Whole image = no parallelism; 1 pixel = overhead dominates.
@@ -34,34 +34,34 @@
 
 \subsection{Geometric Decomposition}
 
-\begin{concept}{Geometric Decomposition}\\
+\begin{concept}{Geometric Decomposition}
     Array problems with local-neighbourhood (stencil) operations $\to$ split into tiles. Interior = embarrassingly parallel; only boundaries shared.
 \end{concept}
 
-\begin{definition}{Ghost / Halo Cells}\\
+\begin{definition}{Ghost / Halo Cells}
     Read-only copy of a neighbour's boundary, needed because the $3\times3$ kernel reads one row/col out. Exchange (1) a-priori or (2) overlapped with compute.
 \end{definition}
 
-\begin{formula}{Surface vs Volume}\\
+\begin{formula}{Surface vs Volume}
     compute $\propto$ \emph{volume}; communication $\propto$ \emph{surface}.
-    \vspace{1mm}\\
+    \vspace{1mm}
     equal volume $N^2/4$: square surface $2N$ vs strip $\tfrac{5N}{2}$ $\Rightarrow$ \important{square wins}.
-    \vspace{1mm}\\
+    \vspace{1mm}
     $10\times10$: square 25 calc/20 transfers; strip 20/25.
-    % INSERT IMAGE: L2 slide 13 -- surface vs volume sketch
+    % INSERT IMAGE: L2 slide 13 surface vs volume sketch
 \end{formula}
 
-\begin{KR}{Recipe: Surface/Volume Comparison}\\
+\begin{KR}{Recipe: Surface/Volume Comparison}
     Volume = cells (compute); Surface = boundary cells (comms). Lower surface/volume wins for equal volume.
 \end{KR}
 
-\begin{example2}{Ex.\ S12/13 -- Square vs rectangle}\\
+\begin{example2}{Ex.\ S12/13 Square vs rectangle}
     For a $10\times10$ matrix in 4 chunks, which shape is better and why?
     \tcblower
     Equal volume, but square surface $2N <$ strip $\tfrac{5N}{2}$ $\Rightarrow$ \important{square} = more compute per unit communication.
 \end{example2}
 
-\begin{example2}{Ex.\ S16/17 -- Apply to edge detection}\\
+\begin{example2}{Ex.\ S16/17 Apply to edge detection}
     Task parallelism or geometric? Chunks? Data sharing?
     \tcblower
     \important{Geometric Decomposition}; square tiles (or strips); share a 1-pixel \important{read-only ghost halo}; interior embarrassingly parallel.
@@ -69,11 +69,11 @@
 
 \subsection{Dependency \& Mapping}
 
-\begin{concept}{Distributed Array}\\
+\begin{concept}{Distributed Array}
     More chunks than UEs, assigned block-cyclic / round-robin so each UE owns several scattered chunks $\to$ smoother load balance.
 \end{concept}
 
-\begin{example2}{Ex.\ S10 -- Group \& order chunks}\\
+\begin{example2}{Ex.\ S10 Group \& order chunks}
     How to group and order chunk tasks?
     \tcblower
     Group tasks on the same chunk; order = front pipeline, then \important{ghost-exchange before boundary}, then \texttt{sobel\_x/y}$\to$\texttt{sobel\_all} join per chunk.
@@ -81,15 +81,15 @@
 
 \subsection{SPMD}
 
-\begin{concept}{SPMD}\\
+\begin{concept}{SPMD}
     \emph{Single Program Multiple Data}: one program on every UE, each with a unique ID/rank used to branch and index its data.
 \end{concept}
 
-\begin{KR}{Recipe: SPMD Program}\\
+\begin{KR}{Recipe: SPMD Program}
     Init $\to$ get ID/rank $\to$ common code (branch/index by ID) $\to$ distribute data $\to$ collect+combine $\to$ finalise.
 \end{KR}
 
-\begin{example2}{Ex.\ S27/28 -- SPMD evaluated}\\
+\begin{example2}{Ex.\ S27/28 SPMD evaluated}
     Strengths and limits?
     \tcblower
     One maintainable, portable code base; overhead at start-up/shutdown; aligns with message passing. \important{Limit}: branching into genuinely different per-UE tasks stretches the pattern.

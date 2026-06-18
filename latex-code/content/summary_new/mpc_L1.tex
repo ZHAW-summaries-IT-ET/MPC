@@ -1,0 +1,289 @@
+\section{L1 Introduction \& Task Decomposition}
+
+\begin{concept}{Lernziele (Learning Goals)}
+    \begin{enumerate}
+        \item Know and explain the \textbf{terms} (host/device/CU/PE/FU/UE; dual meaning of ``task'') [S12]
+        \item Know and explain the \textbf{general solutions} Algorithm-Structure patterns (organise by task vs data) [S22/25]
+        \item Trace the \textbf{top-down path} through the four pattern layers (Sobel) [S23]
+        \item Know how to apply the \textbf{task-decomposition} pattern (functional vs loop splitting) [S26]
+        \item Explain the difference between a \textbf{CFG and a call graph} [S29]
+        \item Explain the \textbf{task-parallelism dependency} terms (embarrassingly parallel; order; removable/separable) [S35]
+        \item Explain the \textbf{scheduling} terms (static, dynamic, task queue, work-stealing) [S36]
+    \end{enumerate}
+\end{concept}
+
+\subsection{LZ1 Vocabulary \& Platform Model}
+
+\mult{2}
+
+\begin{definition}{Compute Hierarchy}
+    Host \emph{delegates to} a Compute Device.
+    \begin{itemize}
+        \item \textbf{Host}: controller that delegates
+        \item \textbf{Device}: receives the work
+        \item \textbf{CU} $\to$ \textbf{PE} $\to$ \textbf{FU} (units inside)
+        \item \textbf{UE}: process/thread running a task
+    \end{itemize}
+\end{definition}
+
+\begin{definition}{``Task'' (dual use)}
+    \begin{itemize}
+        \item Linux sense: a process \emph{or} a thread
+        \item parallel sense: a part of a parallel program (a unit of work)
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Map Platform $\to$ Terminology}
+    \paragraph{Find the host} which side delegates work.
+    \paragraph{Find the device} which side receives it; inside it CU $\to$ PE $\to$ FU.
+    \paragraph{Identify UEs} each spawned process/thread; a \emph{task} is one work slice it runs.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ1 CB1 / Jetson terminology}
+    Programming on the CB1, delegating to the Jetson Nano. Map the platform; and what are the two meanings of ``task''?
+    \tcblower
+    CB1 = \important{Host}; Nano = \important{Device}; Nano SMs = CUs; CUDA cores = PEs; ALU/FPU = FU; spawned threads = UEs. ``Task'' = a process/thread (Linux) \emph{or} a piece of parallel work (here, one Sobel slice).
+\end{example2}
+
+\subsection{LZ2 General Solutions (Algorithm Structure)}
+
+\begin{concept}{Pattern Hierarchy}
+    Worked top$\to$bottom: Finding Concurrency $\to$ Algorithm Structure $\to$ Supporting Structure $\to$ Implementation Mechanisms.
+\end{concept}
+
+\begin{concept}{Algorithm-Structure Decision Tree}
+    Pick by the \emph{major organising principle} $\times$ \emph{structure}:
+    \begin{itemize}
+        \item Organise by \textbf{Task}: Task Parallelism (linear) $\cdot$ Divide \& Conquer (recursive)
+        \item Organise by \textbf{Data}: Geometric Decomposition (array/linear) $\cdot$ Recursive Data
+        \item Organise by \textbf{Flow}: Pipeline $\cdot$ Event-Based Coordination
+    \end{itemize}
+\end{concept}
+
+\begin{KR}{Recipe: Choose an Algorithm-Structure Pattern}
+    \paragraph{Organising principle} what dominates tasks, data, or data-flow?
+    \paragraph{Structure} linear/array or recursive?
+    \paragraph{Map} task+linear $\to$ Task Parallelism; task+recursive $\to$ Divide \& Conquer; data+array $\to$ Geometric Decomposition; data+recursive $\to$ Recursive Data; flow $\to$ Pipeline / Event-Based.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ2 Pick the pattern}
+    (a) Sobel applies the same kernel to every image region. (b) Quicksort recursively splits an array. Which Algorithm-Structure pattern each?
+    \tcblower
+    (a) Organise by \important{data}, array $\Rightarrow$ \important{Geometric Decomposition}. (b) Organise by \important{task}, recursive $\Rightarrow$ \important{Divide \& Conquer}.
+\end{example2}
+
+\subsection{LZ3 Top-Down Pattern Path}
+
+\begin{concept}{Layer $\to$ Pattern (Sobel)}
+    \begin{itemize}
+        \item Finding Concurrency $\to$ Task Decomposition + Dependency Analysis
+        \item Algorithm Structure $\to$ Task Parallelism
+        \item Supporting Structure $\to$ Fork / Join
+        \item Implementation Mechanisms $\to$ Processes \& Threads
+    \end{itemize}
+\end{concept}
+
+\begin{KR}{Recipe: Trace Patterns Top-Down}
+    Walk the four layers in order, choosing one pattern per layer for your problem: expose concurrency $\to$ organise the algorithm $\to$ pick supporting structures $\to$ map to threads/processes.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ3 Trace Sobel through the layers}
+    Name the chosen pattern at each of the four layers for Sobel.
+    \tcblower
+    Finding Concurrency: \important{task decomposition + dependency analysis}; Algorithm Structure: \important{task parallelism} (and geometric decomposition for the data view); Supporting Structure: \important{fork/join}; Implementation: \important{processes \& threads}.
+\end{example2}
+
+\subsection{LZ4 Task Decomposition}
+
+\mult{2}
+
+\begin{concept}{Functional vs Loop Splitting}
+    \begin{itemize}
+        \item \textbf{Functional}: split by named function (few tasks)
+        \item \textbf{Loop/data}: split per-element loop by region (scales)
+    \end{itemize}
+\end{concept}
+
+\begin{concept}{Solution-Space Criteria}
+    \begin{itemize}
+        \item find as many identifiable tasks as possible
+        \item enough to keep all cores busy
+        \item tasks as independent + distinct as possible
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{concept}{Sobel Pipeline (running example)}
+    $\texttt{read\_image}\to\texttt{rgb\_2\_grey}\to\{\texttt{sobel\_x}\parallel\texttt{sobel\_y}\}\to\texttt{sobel\_all}\to\texttt{display\_image}$ only \texttt{sobel\_x}\,\&\,\texttt{sobel\_y} are independent.
+\end{concept}
+
+\begin{formula}{Sobel Operator}
+    $G_x=\begin{bsmallmatrix}-1&0&+1\\-2&0&+2\\-1&0&+1\end{bsmallmatrix}$,\;
+    $G_y=\begin{bsmallmatrix}-1&-2&-1\\0&0&0\\+1&+2&+1\end{bsmallmatrix}$;\;
+    $|G|=\sqrt{G_x^2+G_y^2}\to|G_x|+|G_y|$
+\end{formula}
+
+\begin{KR}{Recipe: Task-Decompose an Algorithm}
+    \paragraph{Draw the CFG} nodes = functions, edges = data deps.
+    \paragraph{Count distinct actions} = functional tasks.
+    \paragraph{Find independent tasks} no path between $\Rightarrow$ concurrent.
+    \paragraph{Try both splittings} functional vs loop/region.
+    \paragraph{Check solution space} enough tasks for all cores; as independent + distinct as possible.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ4 Decompose Sobel}
+    Split Sobel into tasks. How many distinct actions? Independent tasks? Functional or loop splitting?
+    \tcblower
+    6 functional tasks; \important{6} distinct actions; only \texttt{sobel\_x},\texttt{sobel\_y} independent. Functional split = limited (2-way); \important{loop/region splitting} scales to all cores.
+\end{example2}
+
+\subsection{LZ5 CFG vs Call Graph}
+
+\begin{definition}{CFG vs Call Graph}
+    \begin{itemize}
+        \item \textbf{CFG} (control-flow graph): \emph{all possible} execution paths static; used by compilers/optimisers
+        \item \textbf{Call graph}: the \emph{actual} execution/calls dynamic; used by profilers
+    \end{itemize}
+\end{definition}
+
+\begin{KR}{Recipe: Tell CFG from Call Graph}
+    Ask: \emph{possible} paths (static, compiler/optimiser) $\to$ CFG; \emph{actual} calls observed (dynamic, profiler) $\to$ call graph.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ5 Which graph?}
+    (a) A profiler reports which functions actually called which, and how often. (b) A diagram of every branch the program could take. Which is which?
+    \tcblower
+    (a) \important{Call graph} (actual, dynamic, profiler). (b) \important{CFG} (all possible paths, static).
+\end{example2}
+
+\subsection{Dependency Analysis (Finding Concurrency)}
+
+\mult{2}
+
+\begin{concept}{Group / Order / Share}
+    \begin{itemize}
+        \item \textbf{Group}: tasks with same data/constraints
+        \item \textbf{Order}: producer before consumer
+        \item \textbf{Data-sharing}: classify each datum
+    \end{itemize}
+\end{concept}
+
+\begin{definition}{Data-Sharing Types}
+    \begin{itemize}
+        \item read-only
+        \item effectively-local
+        \item read-write (accumulate / multi-read-single-write)
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{example2}{Ex.\ Dependency analysis for Sobel}
+    Which sub-pattern matters most? Group/order/share for Sobel?
+    \tcblower
+    \important{Data Sharing}. Group \texttt{sobel\_x/y} (same grey input); order \texttt{sobel\_all} after both; grey = read-only, kernel = effectively-local, \texttt{Gx/Gy} = read-write, \texttt{sobel\_all} = \important{accumulate}.
+\end{example2}
+
+\subsection{LZ6 Task-Parallelism Dependencies}
+
+\begin{definition}{Dependencies}
+    \begin{itemize}
+        \item \textbf{Embarrassingly parallel}: no dependencies among tasks
+        \item \textbf{Order} dependency: must be enforced (producer$\to$consumer)
+        \item \textbf{Data} dependency:
+        \begin{itemize}
+            \item \emph{removable} via code/loop transformation
+            \item \emph{separable} replicate the data structure (replicated data), then combine
+        \end{itemize}
+    \end{itemize}
+\end{definition}
+
+\begin{KR}{Recipe: Analyse Task Dependencies}
+    \paragraph{None?} independent $\to$ embarrassingly parallel.
+    \paragraph{Order?} enforce producer before consumer.
+    \paragraph{Data?} try to make it \emph{removable} (transform) or \emph{separable} (replicate + combine, e.g.\ reduction).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ6 Classify the dependencies}
+    Tasks all add into one shared \texttt{sum}. What dependency is this, and how do you parallelise it?
+    \tcblower
+    A \important{data dependency} on \texttt{sum}. It is \important{separable}: give each UE a private partial sum (replicated data), then combine i.e.\ a \emph{reduction}. (By contrast \texttt{sobel\_x}$\parallel$\texttt{sobel\_y} are embarrassingly parallel; \texttt{sobel\_all} has an \emph{order} dependency on both.)
+\end{example2}
+
+\subsection{LZ7 Scheduling (Task $\to$ UE)}
+
+\mult{2}
+
+\begin{definition}{Schedule Types}
+    \begin{itemize}
+        \item \textbf{Static}: assigned a priori; low overhead; needs predictable/equal load
+        \item \textbf{Dynamic}: task queue, UE grabs next when free; for unknown load
+        \item \textbf{Work-stealing}: idle UE takes from others' queues; adds complexity
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Task-Parallelism Checks}
+    \begin{itemize}
+        \item compute $>$ management overhead
+        \item \#tasks $\geq$ \#PEs
+        \item minimise dependencies
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Choose a Schedule}
+    equal/predictable load $\to$ \emph{static} (low overhead); uneven/unknown $\to$ \emph{dynamic} queue; idle UEs + imbalance $\to$ \emph{work-stealing} (at extra complexity).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ7 Pick a schedule}
+    6 equal Sobel chunks on 4 cores. Static or dynamic? Why?
+    \tcblower
+    6 on 4 leaves an uneven last round, so prefer \important{dynamic} (or make \#chunks a multiple of 4). If chunks are truly equal \emph{and} divide the cores, \emph{static} wins on low overhead. \emph{Work-stealing} helps if some chunks run long.
+\end{example2}
+
+\subsection{Supporting Structure \& Implementation}
+
+\mult{2}
+
+\begin{definition}{Fork--Join}
+    Clone code into concurrent tasks, then \emph{join} (wait). \important{Not} POSIX \texttt{fork()}; suits recursive/irregular work.
+\end{definition}
+
+\begin{definition}{Process vs Thread}
+    \begin{itemize}
+        \item \textbf{Process}: own address space, MPU-isolated, \texttt{fork()} (CoW)
+        \item \textbf{Thread}: shares memory, cheap $\to$ thread pool
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{example2}{Ex.\ Fork-join \& process vs thread}
+    Is fork-join a good fit for Sobel? Process or thread for the workers?
+    \tcblower
+    Fork-join is a \important{poor fit} for a fixed pipeline (it suits irregular/recursive work). Use \important{threads}: they share the image memory (cheap comms) and are cheap to create vs processes.
+\end{example2}
+
+\subsection{Exam FS23 Choosing a UE}
+
+\begin{KR}{Recipe: Choose a UE (Process vs Thread)}
+    \paragraph{Shared data?} yes $\to$ threads (shared memory, cheap comms); isolation needed $\to$ processes.
+    \paragraph{Cost of UE} thread create $\ll$ process (\texttt{fork}/CoW).
+    \paragraph{Cost of IPC} threads share memory; processes need pipes/shm/messages.
+    \paragraph{Cost of distributing chunks} threads = pointers; processes = copy/map.
+    \paragraph{UE $\to$ core} pin/affinity to keep caches warm.
+\end{KR}
+
+\begin{example2}{Exam FS23 Q3.3 Choice of UE (5P)}
+    Sobel on $1024\times1024$ streamed images, 4-core SMP Linux, at least 6 chunks. Explain your UE choice cost of UE, IPC cost, cost of distributing chunks to UEs, cost of distributing UEs to cores.
+    \tcblower
+    Choose \important{threads}: cheap to create vs a process (1P); IPC via shared memory is cheap image already in one address space (1P); chunks distributed as pointers/offsets, near-zero cost (1P); pin threads to cores (affinity) for UE$\to$core mapping (1P); structured reasoning throughout (1P).
+\end{example2}
+
+\begin{remark}
+    Exam FS23 \textbf{Q1} = ``Trivia'', 10 single-point questions (the paper leaves the content blank). Expect short recall items from any lecture revise the \emph{definitions} and \emph{concepts} boxes throughout.
+\end{remark}

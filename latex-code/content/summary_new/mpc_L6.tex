@@ -1,0 +1,284 @@
+\section{L6 Memory}
+
+\begin{concept}{Lernziele (Learning Goals)}
+    \begin{enumerate}
+        \item Explain \textbf{cache} [s4] and \textbf{paging} [s5]
+        \item Explain the \textbf{two types of thrashing} [s13]
+        \item Explain the \textbf{cost of cache-oblivious} code (context switch) [s14]
+        \item Explain \textbf{cache writeback} [s16] and \textbf{multicore L1 read} on shared L2 [s17]
+        \item Explain \textbf{coherence} + conditions [s19] and \textbf{consistency} [s20]
+        \item Explain how coherence is \textbf{managed}: snooping [s21] and \textbf{directory} [s22]
+        \item Explain \textbf{false sharing} [s23]
+        \item Understand the \textbf{memory architectures} UMA/NUMA/SUMA + their limits [s25--29]
+    \end{enumerate}
+    \emph{Worked-example slides (no explicit Lernziel): the memory-access trace [s6--12] and ASID/CPU-pinning [s24].}
+\end{concept}
+
+\subsection{LZ1 Cache \& Paging}
+
+\mult{2}
+
+\begin{definition}{Cache}
+    Fast memory near/in the CPU, \important{transparent} to the programmer.
+    \begin{itemize}
+        \item hit $\to$ fast
+        \item miss $\to$ fetch a whole \emph{line}, also cache it
+        \item write-back uses a \important{dirty bit}
+    \end{itemize}
+\end{definition}
+
+\begin{definition}{Paging}
+    Address space $\to$ pages (4K/2M); physical $\to$ frames.
+    \begin{itemize}
+        \item only \emph{used} pages loaded (any frame)
+        \item \textbf{resident set} = pages in memory
+        \item \textbf{working set} = pages in use now
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Reason about Cache/Paging}
+    cache: hit serve / miss fetch a line (exploit locality). paging: page$\to$frame via page table; keep only the working set resident.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ1 Why is a[1] fast after a[0]?}
+    Reading \texttt{a[0]} misses but \texttt{a[1..15]} are fast. Why? And resident vs working set?
+    \tcblower
+    The miss on \texttt{a[0]} fetches the \important{whole line} (incl.\ \texttt{a[1..15]}) $\to$ subsequent reads are \important{hits} (spatial locality). Resident = pages in memory; working = pages in use now.
+\end{example2}
+
+\subsection{The Memory Access Walk (worked)}
+
+\begin{definition}{Access Chain}
+    CPU pipeline (IF$\cdot$ID$\cdot$EX$\cdot$MEM$\cdot$WB) $\to$ Cache $\to$ \textbf{MPU} (rights) $\to$ \textbf{MMU} (\textbf{TLB} else page-table walk) $\to$ \textbf{page fault} $\to$ MM software.
+\end{definition}
+
+\begin{KR}{Recipe: Trace a Memory Access}
+    \paragraph{Cache} hit $\to$ done; miss $\to$ continue.
+    \paragraph{MPU} access allowed?
+    \paragraph{MMU/TLB} hit $\to$ frame; miss $\to$ walk page tables.
+    \paragraph{Page fault} empty $\to$ MM loads frame, updates page dir.
+    \paragraph{Fill} TLB caches mapping; cache reads a line; a write sets the \important{dirty bit}.
+\end{KR}
+
+\begin{example2}{Ex.\ (s6--12) Trace the code}
+    Walk \texttt{mov ea,var1; mov eb,var2; add ea,eb; mov var3,ea}. Why is the first fetch slow but the next fast?
+    \tcblower
+    First fetch (\texttt{0x100}): cache miss $\to$ MPU $\to$ MMU $\to$ TLB miss $\to$ walk empty $\to$ \important{page fault} (load frame \#2). Fill = whole line (I1--I4) + TLB mapping $\Rightarrow$ \texttt{0x104},\texttt{0x108} are \important{cache hits}. \texttt{var1} (\texttt{0x400}): 2nd page fault (frame \#8); \texttt{var2} = hit; \texttt{mov var3} = write $\to$ \important{dirty bit}.
+    % INSERT IMAGE: L6 slide 6/7 Simple Computer System walk
+\end{example2}
+
+\subsection{LZ2 Thrashing}
+
+\mult{2}
+
+\begin{definition}{Two Types}
+    \begin{itemize}
+        \item \textbf{cache}: many lines map to one slot $\to$ evict/miss loop
+        \item \textbf{disk}: too few frames $\to$ page evict/reload loop
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Effect}
+    Both stall the CPU waiting on much slower memory/disk.
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Diagnose Thrashing}
+    repeated misses on the \emph{same cache slot} $\to$ cache thrash (fix: layout/associativity); constant page evict/reload (too few frames) $\to$ disk thrash (fix: fewer resident processes / more memory).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ2 Same-slot loop}
+    A loop alternately touches two variables that map to the same cache line, then needs the first again. What happens?
+    \tcblower
+    \important{Cache thrashing}: each access evicts the other $\to$ repeated misses $\to$ CPU stalled.
+\end{example2}
+
+\subsection{LZ3 Cost of Cache-Oblivious Code}
+
+\begin{concept}{Context-Switch Cost}
+    \begin{itemize}
+        \item cache \important{high} (flush + write-back dirty)
+        \item TLB \important{high} (flush)
+        \item MPU / page-tables: medium; pipeline: low
+    \end{itemize}
+\end{concept}
+
+\begin{KR}{Recipe: Estimate Switch Cost}
+    cache + TLB dominate (must be flushed/re-warmed). Expect CPI to spike right after a switch, then fall as caches re-fill.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ3 CPI after a switch}
+    After a context switch, why does CPI spike then fall over the next thousands of instructions?
+    \tcblower
+    The cache + TLB are flushed $\to$ a burst of \important{misses + page-walks} $\to$ high CPI; as they \important{re-warm}, CPI drops back. This is the cost of not programming cache-aware.
+\end{example2}
+
+\subsection{LZ4 Multicore L1/L2 (Read \& Writeback)}
+
+\mult{2}
+
+\begin{definition}{Cache Writeback}
+    A dirty line is written back when (1) the controller decides, or (2) it needs the line (eviction). Then dirty$\to$0; eviction sets valid$\to$0, refill, valid$\to$1.
+\end{definition}
+
+\begin{concept}{On a Shared L2}
+    \begin{itemize}
+        \item read: line pulled L2$\to$requesting core's L1 (others keep copies)
+        \item \important{flushing L1 requires flushing L2}; L1$\to$L2 may trigger L2$\to$memory
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Will a Writeback Happen?}
+    Check the dirty bit: dirty + (controller decision or eviction) $\to$ write back first. Clean line $\to$ just refill. Multicore: an L1 flush cascades to L2.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ4 Read then flush}
+    (a) Two cores read \texttt{var1} what's in their caches? (b) When does a dirty line actually get written back?
+    \tcblower
+    (a) Both get a \emph{copy} in their L1 from the shared L2 read-sharing is fine, no invalidation until a write. (b) When the controller decides \emph{or} it needs the line (eviction) and the line is \important{dirty}.
+\end{example2}
+
+\subsection{LZ5 Coherence \& Consistency}
+
+\mult{2}
+
+\begin{definition}{Coherence}
+    Visibility of a write across cores. A write \emph{will} become visible and writes to \emph{one} location are seen in order. Says nothing about \emph{when}; not in the ISA; necessary not sufficient.
+\end{definition}
+
+\begin{definition}{Consistency}
+    Ordering of accesses to \emph{different} locations seen by another core.
+    \begin{itemize}
+        \item sequential / processor / release
+        \item release: order only at sync barriers
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Coherence vs Consistency}
+    One location, ``is the write seen and in order?'' $\to$ \emph{coherence}. Multiple locations, ``in what order are they seen?'' $\to$ \emph{consistency} (strong = all hazards barred, slow; release = order only at barriers, fast).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ5 The read sequences}
+    P1 observes reads 0-1-1-2 while P2 observes 0-2-1-2. What is violated and what is needed? What is release consistency?
+    \tcblower
+    The two cores see writes in \emph{different} order $\to$ a \important{coherence protocol} must make P2 observe P1's write order. \important{Release consistency} = ordering is enforced \emph{only} at explicit synchronisation (memory barriers), maximising performance elsewhere.
+\end{example2}
+
+\subsection{LZ6 Managing Coherence}
+
+\mult{2}
+
+\begin{definition}{Snooping}
+    Bus broadcast; every cache controller listens and invalidates/updates matching lines. \important{Non-scalable}.
+\end{definition}
+
+\begin{definition}{Directory}
+    Point-to-point. A line has an \emph{owner}; a writer informs the owner, which invalidates sharers, waits for ack, then the write proceeds and the writer becomes owner. \important{Scalable}.
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Pick/Trace a Protocol}
+    small bus-based system $\to$ \emph{snooping} (broadcast + invalidate). many cores $\to$ \emph{directory} (owner $\to$ invalidate sharers $\to$ ack $\to$ write $\to$ new owner).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ6 P1 writes a shared line}
+    \texttt{var1} is cached in both P1 and P2; P1 writes it. Trace it under snooping, then under a directory.
+    \tcblower
+    \important{Snooping}: P1 broadcasts the write on the bus $\to$ P2's copy invalidated. \important{Directory}: P1 tells the owner $\to$ owner invalidates P2 $\to$ ack $\to$ P1 writes and becomes owner.
+\end{example2}
+
+\subsection{LZ7 False Sharing}
+
+\begin{definition}{False Sharing}
+    Two cores write \emph{different} variables that sit in the \emph{same} cache line $\to$ the line ping-pongs between caches (useless coherence traffic).
+\end{definition}
+
+\begin{KR}{Recipe: Diagnose \& Fix False Sharing}
+    same line in $\geq$2 caches + writes to \emph{different} vars $\to$ false sharing. Fix: \important{pad/align} the variables onto separate cache lines.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ7 Adjacent counters}
+    Two cores each increment \texttt{v[0]} and \texttt{v[1]} (same line). Problem and fix?
+    \tcblower
+    \important{False sharing}: each write invalidates the other's copy $\to$ line ping-pongs. Fix: pad/align so the two vars are on \important{separate lines}.
+\end{example2}
+
+\subsection{ASID / CPU Pinning (worked)}
+
+\begin{definition}{Preserving Cache/TLB State}
+    Cache + TLB hold expensive process state. Physical-address tagging or an \important{ASID} (Address Space Identifier) lets one process's lines survive while another runs.
+\end{definition}
+
+\begin{KR}{Recipe: Keep Caches Warm}
+    Tag lines by ASID / physical address $\to$ lines persist across switches $\to$ cheap to re-schedule a process on the same core (\important{CPU pinning / processor affinity}).
+\end{KR}
+
+\begin{example2}{Ex.\ Cheap re-scheduling}
+    How do you make re-scheduling a process on its previous core cheap?
+    \tcblower
+    Preserve its cache/TLB lines via \important{ASID}/physical tagging and \important{pin} it to that core (affinity) avoids the flush + re-warm cost.
+\end{example2}
+
+\subsection{LZ8 Memory Architectures}
+
+\mult{2}
+
+\begin{definition}{UMA / NUMA / SUMA}
+    \begin{itemize}
+        \item \textbf{UMA}: equal access, $\sim$4-CPU limit, L2/L3 buffer
+        \item \textbf{NUMA}: fast local, slow remote via interconnect (ccNUMA)
+        \item \textbf{SUMA}: interleaving $\to$ best-case UMA
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{OS Support (Linux)}
+    \begin{itemize}
+        \item HW \emph{cells} $\to$ \emph{nodes}; keep work + memory local
+        \item \important{zonelists} by NUMA distance
+        \item \texttt{taskset} / \texttt{numactl} / \texttt{sched\_setaffinity}
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Classify a Memory Architecture}
+    equal access $\to$ UMA (bus latency limits to $\sim$4 CPUs); fast-local/slow-remote $\to$ NUMA; interleaved-to-fake-contiguous $\to$ SUMA. Keep data local for cache affinity.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ8 Limits \& OS support}
+    Why does the traditional bus cap at $\sim$4 CPUs? Distinguish UMA/NUMA/SUMA. How does Linux handle NUMA?
+    \tcblower
+    Bus latency grows with length $\to$ $\sim$4-CPU sweet spot. \important{UMA} equal access; \important{NUMA} fast local + slow remote (ccNUMA); \important{SUMA} interleaved $\to$ best-case UMA. Linux maps \emph{cells}$\to$\emph{nodes}, keeps memory local, uses \important{zonelists} by distance + \texttt{taskset}/\texttt{numactl}.
+\end{example2}
+
+\subsection{Exam FS23 MMU \& Cache Info}
+
+\begin{KR}{Recipe: Explain a HW Unit (define / function / why)}
+    \paragraph{Define} expand the acronym.
+    \paragraph{Function} state precisely what it does.
+    \paragraph{Why present/absent} reason from the device type (e.g.\ a real-time device needs no MMU).
+\end{KR}
+
+\begin{KR}{Recipe: Cache Info for Cache-Aware Design}
+    To reason about a cache you need: \important{line size}, \important{associativity}, total size (and \#levels / shared vs private).
+\end{KR}
+
+\begin{example2}{Exam FS23 Q2.7 MMU (4P)}
+    The CPU has no MMU what does the term mean, what does it do, and why might this device lack one?
+    \tcblower
+    \important{Memory Management Unit} (1P). Responsible for \emph{virtual memory} address translation, protection, paging (1P). This is probably a \emph{real-time} device, so there is no reason for one (2P).
+\end{example2}
+
+\begin{example2}{Exam FS23 Q2.8 Missing cache info (2P)}
+    Assessing the platform for CPU-driven edge detection what cache-relevant info is missing?
+    \tcblower
+    \important{Line size} (1P) and \important{associativity} (1P).
+\end{example2}

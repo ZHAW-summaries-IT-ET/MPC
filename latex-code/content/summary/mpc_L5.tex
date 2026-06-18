@@ -1,17 +1,17 @@
-\section{L5 -- Operating Systems}
+\section{L5 Operating Systems}
 
 \subsection{Multiprocessor Scheduling}
 
 \mult{2}
 
-\begin{definition}{SQMS vs MQMS}\\
+\begin{definition}{SQMS vs MQMS}
     \begin{itemize}
-        \item \textbf{SQMS}: 1 shared queue -- simple, but lock contention + cache bounce
-        \item \textbf{MQMS}: per-CPU queue -- cache affinity, but load imbalance
+        \item \textbf{SQMS}: 1 shared queue simple, but lock contention + cache bounce
+        \item \textbf{MQMS}: per-CPU queue cache affinity, but load imbalance
     \end{itemize}
 \end{definition}
 
-\begin{concept}{Balancing}\\
+\begin{concept}{Balancing}
     \begin{itemize}
         \item \textbf{cache affinity}: keep a task on its CPU
         \item \textbf{work-stealing}: idle queue takes work from a busy one
@@ -20,7 +20,7 @@
 
 \multend
 
-\begin{example2}{Ex.\ S6 -- Explain SQMS/MQMS}\\
+\begin{example2}{Ex.\ S6 Explain SQMS/MQMS}
     Trade-offs and how to fix imbalance?
     \tcblower
     SQMS = balanced but contended; MQMS = affinity but imbalanced; fix via migration / \important{work-stealing}.
@@ -28,7 +28,7 @@
 
 \subsection{Scheduler Categories}
 
-\begin{definition}{Linux Policies}\\
+\begin{definition}{Linux Policies}
     \begin{itemize}
         \item \textbf{RT}: \texttt{FIFO} (run-to-completion), \texttt{RR} (time-sliced), \texttt{DEADLINE} (EDF)
         \item \textbf{Fair}: \texttt{OTHER} = EEVDF, RB-tree on \texttt{vruntime}, tuned by \texttt{nice}
@@ -36,11 +36,11 @@
     \end{itemize}
 \end{definition}
 
-\begin{KR}{Recipe: Pick a Scheduler}\\
+\begin{KR}{Recipe: Pick a Scheduler}
     hard deadline $\to$ \texttt{DEADLINE}; strict priority $\to$ \texttt{FIFO}/\texttt{RR}; fairness $\to$ \texttt{OTHER}; background $\to$ \texttt{BATCH}/\texttt{IDLE}.
 \end{KR}
 
-\begin{example2}{Ex.\ S7--9 -- Three categories}\\
+\begin{example2}{Ex.\ S7--9 Three categories}
     Name the scheduler categories and their goals.
     \tcblower
     RT (strict priority, N top run), Fair (utilisation/fairness via EEVDF), Low (background). \texttt{DEADLINE} can bypass balancing.
@@ -48,18 +48,18 @@
 
 \subsection{Amdahl's Law}
 
-\begin{formula}{Amdahl's Law}\\
+\begin{formula}{Amdahl's Law}
     fraction $p$ parallelisable on $N$ processors:
     $$S(N)=\frac{1}{(1-p)+\tfrac{p}{N}},\qquad S_{\max}=\frac{1}{1-p}$$
     Real $S_{\max}$ limited by coherence + sync overhead.
-    % INSERT IMAGE: L5 slide 10 -- Amdahl curves
+    % INSERT IMAGE: L5 slide 10 Amdahl curves
 \end{formula}
 
-\begin{KR}{Recipe: Apply Amdahl's Law}\\
+\begin{KR}{Recipe: Apply Amdahl's Law}
     Find $p$ $\to$ plug $N$ into $S(N)$ $\to$ ceiling $S_{\max}=\tfrac{1}{1-p}$.
 \end{KR}
 
-\begin{example2}{Ex.\ S8 -- Worked}\\
+\begin{example2}{Ex.\ S8 Worked}
     $p=0.75$: speed-up on 4 cores? maximum?
     \tcblower
     $S(4)=\tfrac{1}{0.4375}\approx{}$ \important{$2.29\times$}; $S_{\max}=\tfrac{1}{0.25}={}$ \important{$4\times$}.
@@ -67,22 +67,22 @@
 
 \subsection{Synchronisation}
 
-\begin{definition}{Critical Section}\\
+\begin{definition}{Critical Section}
     RW-shared data; one task inside at a time. Atomicity via: disable IRQ, ISA atomic, Peterson/spinlock, language, OS mutex/semaphore (\important{blocks, no spin}).
 \end{definition}
 
-\begin{concept}{TAS vs TTAS}\\
+\begin{concept}{TAS vs TTAS}
     \begin{itemize}
         \item \textbf{TAS}: atomic \texttt{XCHG}, spins with writes $\to$ bus lock + invalidation
         \item \textbf{TTAS}: spin on cached read first, write only when free $\to$ near-ideal
     \end{itemize}
 \end{concept}
 
-\begin{KR}{Recipe: Build a Lock}\\
+\begin{KR}{Recipe: Build a Lock}
     atomic op (TAS) $\to$ cheaper TTAS (read first) $\to$ or block via OS mutex/semaphore.
 \end{KR}
 
-\begin{example2}{Ex.\ S11 -- TAS vs TTAS}\\
+\begin{example2}{Ex.\ S11 TAS vs TTAS}
     Why is TTAS faster under contention?
     \tcblower
     TAS spins with atomic writes (bus lock + invalidation); TTAS spins on a cached read, writes only when the lock looks free $\to$ far less coherence traffic.

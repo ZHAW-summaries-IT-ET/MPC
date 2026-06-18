@@ -1,0 +1,325 @@
+\section{L7 CPU Architectures}
+
+\begin{concept}{Lernziele (Learning Goals)}
+    \begin{enumerate}
+        \item Know the \textbf{GP-CPU architectures} (Von Neumann / Harvard / Modified Harvard) [s4--6]
+        \item Know the \textbf{ways to parallelise} a CPU [s7]
+        \item Know how \textbf{VLIW / DSP} (multiple FUs) work [s8--10]
+        \item Know \textbf{CISC vs RISC} + pipeline hazards [s11]
+        \item Know \textbf{superpipelining vs superscalar} [s12]
+        \item Know the \textbf{in/out-of-order} execution modes [s13]
+        \item Understand \textbf{co-processors} (interface, sync, future) [s14--18]
+        \item Know the principle of \textbf{SMT} [s19]
+        \item Know the \textbf{AMP scenarios} + the questions to answer [s20--21]
+        \item Know \textbf{openAMP} (remoteproc, rpmsg/virtio) [s22--25]
+    \end{enumerate}
+\end{concept}
+
+\subsection{LZ1 GP-CPU Architectures}
+
+\mult{2}
+
+\begin{definition}{Three Architectures}
+    \begin{itemize}
+        \item \textbf{Von Neumann}: common I+D memory
+        \item \textbf{Harvard}: separate I/D paths
+        \item \textbf{Modified Harvard}: Harvard inside the chip, von Neumann outside (IC pins are expensive)
+    \end{itemize}
+\end{definition}
+
+\begin{definition}{Fundamental Parts}
+    \begin{itemize}
+        \item cache (speeds transfers into the core)
+        \item instruction pipeline + decoder
+        \item ALU
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Classify a CPU Architecture}
+    shared I+D bus $\to$ Von Neumann; fully separate $\to$ Harvard; \emph{split L1 I/D but unified L2/RAM} $\to$ \important{Modified Harvard}. Datasheet cue: separated I/D caches.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ1 (s5) A53 architecture}
+    A53: L1-I (2-way) and L1-D (4-way) separate, unified L2 (16-way). What architecture?
+    \tcblower
+    \important{Modified Harvard}: Harvard inside (split L1), von Neumann outside (unified L2/memory).
+\end{example2}
+
+\subsection{LZ2 Parallelising a CPU}
+
+\begin{concept}{Four Ways}
+    \begin{itemize}
+        \item multicore (covered)
+        \item multiple FUs (ALUs/multipliers) $\to$ \emph{data} parallelism
+        \item multiple pipelines $\to$ \emph{instruction} parallelism
+        \item heterogeneous PEs (DSP, GPU)
+    \end{itemize}
+\end{concept}
+
+\begin{KR}{Recipe: Identify the Parallelism Mechanism}
+    multiple FUs (VLIW) $=$ data; multiple pipelines (superscalar) $=$ instruction; idle slots filled by a 2nd thread $=$ SMT; separate cores $=$ multicore/AMP.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ2 Name the four}
+    List four ways to add parallelism inside a CPU and the kind each provides.
+    \tcblower
+    \important{Multicore}; \important{multiple FUs} (data); \important{multiple pipelines} (instruction); \important{heterogeneous PEs} (DSP/GPU). The ALU is not the only option (e.g.\ FPU/MAC for DSP work).
+\end{example2}
+
+\subsection{LZ3 Multiple FUs: VLIW / DSP}
+
+\mult{2}
+
+\begin{definition}{DSP}
+    Application-specific FUs: MAC (.M), data access (.D), GP-ALU (.L), shifter/ALU (.S). Harvard memory.
+\end{definition}
+
+\begin{definition}{VLIW}
+    Compiler packs serial instructions into one wide word for the FUs.
+    \begin{itemize}
+        \item needs many registers + bandwidth
+        \item large, binary-\important{incompatible} code
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{concept}{Software Pipelining}
+    Overlap loop iterations (prologue / kernel / epilogue) to cut pipeline stalls; with VLIW gives very tight loop kernels.
+\end{concept}
+
+\begin{KR}{Recipe: Recognise VLIW / DSP}
+    separate program/data bus keeping a MAC fed $\to$ Harvard DSP; one wide instruction the \emph{compiler} packed per FU $\to$ VLIW (+ software pipelining).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ3 (s8) DSP with .M/.D/.L/.S}
+    What memory architecture is this? How does execution work?
+    \tcblower
+    \important{Harvard} (separate program/data bus). Execution = \important{VLIW}: the compiler packs one op per FU into a wide word, run in parallel (+ software pipelining). Big, incompatible code.
+\end{example2}
+
+\subsection{LZ4 CISC/RISC \& Hazards}
+
+\mult{2}
+
+\begin{definition}{CISC vs RISC}
+    \begin{itemize}
+        \item \textbf{CISC}: complex instructions, microcoded
+        \item \textbf{RISC}: load/store, many simple instructions, pipeline- and compiler-friendly
+    \end{itemize}
+\end{definition}
+
+\begin{definition}{Hazards}
+    \begin{itemize}
+        \item structural (resource conflict)
+        \item data (dependency)
+        \item control (branch)
+    \end{itemize}
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Spot a Hazard}
+    two instructions need the same unit $\to$ structural; one needs another's result $\to$ data; a branch changes the path $\to$ control.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ4 Why RISC pipelines better}
+    Why is RISC more pipeline-friendly than CISC? Name the three hazard types.
+    \tcblower
+    Uniform load/store instructions fit a fixed pipeline cleanly (CISC needs microcode for variable, complex instructions). Hazards: \important{structural / data / control}.
+\end{example2}
+
+\subsection{LZ5 Superpipeline vs Superscalar}
+
+\mult{2}
+
+\begin{definition}{Superpipelining}
+    More / finer pipeline stages $\to$ instructions issued faster.
+\end{definition}
+
+\begin{definition}{Superscalar}
+    More pipelines $\to$ several instructions per cycle (scheduling becomes the issue).
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Tell Them Apart}
+    deeper (finer stages, faster issue) $=$ superpipeline; wider (more pipelines, several/cycle) $=$ superscalar.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ5 Distinguish}
+    What is the difference between superpipelining and superscalar?
+    \tcblower
+    \important{Superpipeline} = more/finer stages (issue faster); \important{superscalar} = more pipelines (several issued per cycle).
+\end{example2}
+
+\subsection{LZ6 In/Out-of-Order Execution}
+
+\begin{definition}{Three Modes}
+    \begin{itemize}
+        \item in-order issue, in-order execution
+        \item in-order issue, out-of-order execution
+        \item out-of-order issue, out-of-order execution
+    \end{itemize}
+\end{definition}
+
+\begin{KR}{Recipe: Identify the Mode}
+    Ask whether \emph{issue} and \emph{execution} keep program order. Both ordered = simplest; OoO issue + OoO exec = most aggressive (best unit utilisation, most hardware).
+\end{KR}
+
+\begin{example2}{Ex.\ LZ6 Which is most aggressive?}
+    Name the three superscalar scheduling modes; which extracts the most parallelism?
+    \tcblower
+    In-order/in-order; in-order issue/OoO exec; \important{OoO issue + OoO exec} (the most aggressive, needs the most scheduling hardware).
+\end{example2}
+
+\subsection{LZ7 Co-processors}
+
+\mult{2}
+
+\begin{definition}{Operation}
+    CPU runs recognised instructions; passes others to the co-pro.
+    \begin{itemize}
+        \item unrecognised $\to$ exception
+        \item own clock + memory channels (NEON) $\to$ parallel execution
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Interface \& Sync}
+    \begin{itemize}
+        \item own ISA; instructions via pipeline, data via registers
+        \item 8087 + 8086: the 8086 \emph{stalls} on \texttt{FMUL}
+        \item future uncertain: costly decoders + compiler upkeep
+    \end{itemize}
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Reason about a Co-processor}
+    CPU offloads unknown instructions; co-pro has its own ISA/clock/memory; the two need synchronisation (CPU may stall); good only for generic ops.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ7 8087 / 8086}
+    How does the CPU handle an instruction it doesn't recognise, and what's the catch with the 8087?
+    \tcblower
+    It \important{passes it to the co-pro}; if unrecognised there too $\to$ exception. Catch: the 8086 \important{stalls} while the 8087 performs \texttt{FMUL} (a pipeline/sync effect).
+\end{example2}
+
+\subsection{LZ8 SMT (Hyperthreading)}
+
+\begin{concept}{SMT}
+    A core runs 2 threads to use otherwise-idle resources (4 cores $\to$ 8 threads).
+    \begin{itemize}
+        \item \important{needs a superscalar} core (spare issue slots)
+        \item $\sim$30\% speedup (cache-stall dependent); OS sees 2 cores; security issues
+    \end{itemize}
+\end{concept}
+
+\begin{KR}{Recipe: Reason about SMT}
+    SMT fills idle issue slots with a 2nd thread $\Rightarrow$ only worthwhile on a superscalar core; pin a process to a core to control it.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ8 (s19) Why superscalar?}
+    Why does SMT require a superscalar core? Typical speedup?
+    \tcblower
+    Only a superscalar core has \important{multiple issue slots/pipelines} per cycle to give the 2nd thread; a scalar core has nothing spare. Speedup $\sim$\important{30\%} (more about cache stalls than FU availability).
+\end{example2}
+
+\subsection{LZ9 AMP Scenarios}
+
+\mult{2}
+
+\begin{definition}{Scenarios}
+    \begin{itemize}
+        \item different ISA (PRU/GPU/DSP)
+        \item same ISA (task-driven, master-slave or peer)
+        \item same ISA, different clocks / 64-32 (big.LITTLE)
+        \item different or no OS
+    \end{itemize}
+\end{definition}
+
+\begin{concept}{Questions to Answer}
+    How do the cores boot? Where is their code? How tightly coupled (sync, data, comms)?
+\end{concept}
+
+\multend
+
+\begin{KR}{Recipe: Set Up AMP}
+    same ISA $\to$ SMP/big.LITTLE under one OS; \important{different ISA $\to$ separate OS/bare-metal per core + openAMP}. Answer the boot/code/coupling questions first.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ9 (s20) Different ISA under one OS?}
+    Can different-ISA cores run under a single OS? Give two AMP scenarios.
+    \tcblower
+    \important{No} one kernel is built for one ISA (big.LITTLE works only because it's the \emph{same} ISA). Scenarios: different ISA (specialised PRU/GPU/DSP); same ISA split by task (comms vs I/O); big.LITTLE; different/no OS.
+\end{example2}
+
+\subsection{LZ10 openAMP}
+
+\mult{2}
+
+\begin{definition}{remoteproc}
+    Boots a remote core: \texttt{rproc\_boot()} decodes the ELF, places segments in memory, enables resource tables. (Zynq: APU boots Linux via GRUB; RPU R5s start halted.)
+\end{definition}
+
+\begin{definition}{rpmsg / virtio}
+    IPC: \texttt{rpmsg} channels (source/dest, \texttt{rpmsg\_send} + rx callback) over \texttt{virtio} ring buffers (paravirtualisation split driver).
+\end{definition}
+
+\multend
+
+\begin{KR}{Recipe: Couple AMP Cores with openAMP}
+    \paragraph{Boot} \texttt{remoteproc} loads + starts the remote ELF.
+    \paragraph{Communicate} \texttt{rpmsg} messages over \texttt{virtio} ring buffers.
+    \paragraph{Two IPC methods} shared memory + signalling good for asynchronous cores.
+\end{KR}
+
+\begin{example2}{Ex.\ LZ10 Bring up an R5 on the Zynq}
+    On the Zynq UltraScale+, how does the APU start an R5 and talk to it?
+    \tcblower
+    \important{remoteproc}: \texttt{rproc\_boot} decodes the R5's ELF and boots it (the RPU starts halted). Communication via \important{rpmsg over virtio} ring buffers. Zynq = 4$\times$A53 SMP + 2$\times$R5 lockstep + FPGA accelerators.
+\end{example2}
+
+\subsection{Exam FS23 Q2: Architectures (RZ/V2L)}
+
+\begin{concept}{Scenario (appendix)}
+    RZ/V2L: Cortex-A55 (1.2\,GHz) + Cortex-M33 (200\,MHz). L1 I/D = 32\,KB each (split), L2 = 0\,KB, L3 = 256\,KB shared; ARMv8.2-A; NEON/FPU; no MMU mentioned; openAMP links A55$\leftrightarrow$M33.
+\end{concept}
+
+\begin{KR}{Recipe: Interpret a Cache Hierarchy}
+    \paragraph{Datasheet} separate I/D caches $\Rightarrow$ (modified) Harvard.
+    \paragraph{Per level} L1 closest (often split I/D); L2 unified (may be 0); L3 shared.
+    \paragraph{Missing for design} line size, associativity, total size.
+\end{KR}
+
+\begin{example2}{Exam FS23 Q2.1 Architecture (2P)}
+    What architecture does this processor represent and why?
+    \tcblower
+    \important{Modified Harvard} (1P). Because the data and instruction caches are \emph{separated}, which represents a (modified) Harvard architecture (1P).
+\end{example2}
+
+\begin{example2}{Exam FS23 Q2.2 Advantage (2P)}
+    What is the advantage of the chosen architecture?
+    \tcblower
+    Instruction and data addressing are separated, so fetching one doesn't hinder the other (1P). Different, more fitting cache architectures can be used (1P).
+\end{example2}
+
+\begin{example2}{Exam FS23 Q2.3 L1/L2/L3 (max 4P)}
+    What do L1, L2 and L3 represent?
+    \tcblower
+    Cache architecture (1P). L1 split into data + instruction cache (1P). L2 not existent / 0\,KB (1P). L3 common (shared) cache (1P).
+\end{example2}
+
+\begin{example2}{Exam FS23 Q2.5 M33 to A55 (1P)}
+    How can the Cortex-M33 communicate with the A55 cores?
+    \tcblower
+    Via \important{shared external memory} (1P).
+\end{example2}
+
+\begin{example2}{Exam FS23 Q2.6 openAMP IPC (3P)}
+    openAMP is in essence two IPC methods which, and why good for M33$\leftrightarrow$A55?
+    \tcblower
+    \important{Shared memory} (1P) and \important{signalling} (1P). Because the two cores are \emph{asynchronous} and openAMP suits that asynchronicity (1P).
+\end{example2}

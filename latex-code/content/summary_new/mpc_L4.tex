@@ -1,6 +1,6 @@
 \section{L4 SIMD (Flynn / NEON / MISD)}
 
-\subsection{LZ1 Flynn's Taxonomy}
+\subsection{Flynn's Taxonomy}
 
 \mult{2}
 
@@ -24,13 +24,13 @@
     Count \emph{instruction} streams $\times$ \emph{data} streams: 1/1 SISD; 1/many SIMD; many/1 MISD; many/many MIMD.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ1 Classify these}
+\begin{example2}{Ex.\ Classify these}
     (a) a vector add of 4 lanes; (b) two CPUs running the same code lockstep; (c) a multicore server. Which Flynn class each? What is (a) abstracted to?
      \\ \solution{Solution: }
     (a) \important{SIMD} abstracted to SIMT then SPMD; (b) \important{MISD} (dependability); (c) \important{MIMD}.
 \end{example2}
 
-\subsection{LZ2 SPMD Pattern}
+\subsection{SPMD Pattern}
 
 \begin{concept}{SPMD}
     \emph{Single Program Multiple Data}: one identical program per UE, each with a unique ID/rank used to branch and index its data. It is the software generalisation of SIMD.
@@ -40,13 +40,13 @@
     Init $\to$ get unique ID/rank $\to$ common code (branch / index by ID) $\to$ distribute data $\to$ collect + combine $\to$ finalise.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ2 SPMD vs SIMD}
+\begin{example2}{Ex.\ SPMD vs SIMD}
     Why is SPMD called the software cousin of SIMD?
      \\ \solution{Solution: }
     Both run the \emph{same instructions/program} on \emph{different data}. SIMD does it in hardware lanes (lockstep); SPMD does it across UEs, each picking its data slice by \important{rank} it relaxes the strict lockstep.
 \end{example2}
 
-\subsection{LZ3 SIMD Vectorisation Motivation}
+\subsection{SIMD Vectorisation Motivation}
 
 \begin{concept}{Why Vectorise}
     DSP kernels FIR filter, Fourier transform, dot product, matrix multiply all reduce to \important{multiply-accumulate (MAC)}. SIMD does one instruction across many lanes in lockstep (e.g.\ a 4-lane parallel add vs a scalar add).
@@ -56,13 +56,13 @@
     Is it a \emph{regular, repeated MAC over arrays} with independent elements? $\to$ vectorise. Pointer-chasing / data-dependent control $\to$ does not vectorise well.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ3 Which vectorise?}
+\begin{example2}{Ex.\ Which vectorise?}
     FIR filter, dot product, linked-list traversal which suit SIMD and why?
      \\ \solution{Solution: }
     \important{FIR} and \important{dot product} regular MAC over contiguous arrays. \important{Linked-list traversal} does not pointer chasing, no regular data parallelism.
 \end{example2}
 
-\subsection{LZ4 NEON Basics (Vector MAC Unit)}
+\subsection{NEON Basics (Vector MAC Unit)}
 
 \mult{2}
 
@@ -98,13 +98,13 @@
     Split \texttt{V} + \texttt{mod} + \texttt{op} + \texttt{shape} + \texttt{.dt}: V $=$ vector op; \texttt{mod}/\texttt{shape} tweak behaviour/width; \texttt{.dt} sets lane type.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ4 Decode \texttt{VQADD.s16}}
+\begin{example2}{Ex.\ Decode \texttt{VQADD.s16}}
     What does \texttt{VQADD.s16} do? And why is there no \texttt{VDIV}?
      \\ \solution{Solution: }
     \important{Saturating vector add} of signed 16-bit lanes (Q = saturate instead of wrap on overflow). No \texttt{VDIV}: NEON has \important{no divide} use a reciprocal estimate instead.
 \end{example2}
 
-\subsection{LZ5 NEON Intrinsics}
+\subsection{NEON Intrinsics}
 
 \mult{2}
 
@@ -127,19 +127,19 @@
     Pattern \texttt{v\,op\,q?\,\_\,type}: \texttt{q} present $\Rightarrow$ 128-bit Q (else 64-bit D); \texttt{type} \texttt{<base><bits>x<count>} $\to$ \emph{count} = lanes.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ5 (s19) Decode intrinsics}
+\begin{example2}{Ex.\ (s19) Decode intrinsics}
     What does \texttt{vmulq\_f64} do? How many lanes in \texttt{uint16x4\_t}? What does \texttt{vmul\_lane\_u16(a,b,L)} do?
      \\ \solution{Solution: }
     \texttt{vmulq\_f64}: 128-bit lane-wise multiply of \important{2 doubles} $\to$ \texttt{float64x2\_t}. \texttt{uint16x4\_t}: \important{4 lanes}. \texttt{vmul\_lane}: broadcast \texttt{b[L]} to all lanes, multiply by \texttt{a}.
 \end{example2}
 
-\begin{example2}{Ex.\ LZ5 (s20) Lab: vectorise statistics}
+\begin{example2}{Ex.\ (s20) Lab: vectorise statistics}
     An IoT gateway aggregates a stream (mean, std, skew, kurtosis) to cut comms. Why vectorise, and what is the catch?
      \\ \solution{Solution: }
     These reduce to repeated MAC over the samples $\to$ vectorise with NEON to finish quickly/efficiently. \important{Catch}: they need \emph{divisions} and \emph{floating point}, both expensive on NEON (no divide) compute incrementally and use reciprocal estimates.
 \end{example2}
 
-\subsection{LZ6 MISD / Lockstep}
+\subsection{MISD / Lockstep}
 
 \mult{2}
 
@@ -162,7 +162,7 @@
     Redundant channels running on the \emph{same} data + compare/vote (RESET on mismatch) $\Rightarrow$ MISD / lockstep. Real example: U96 / Zynq ZU3EG, 2$\times$Cortex-R5F lockstep.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ6 ABS controller}
+\begin{example2}{Ex.\ ABS controller}
     An ABS unit runs two CPUs that execute the same code and compare every bus access, issuing a RESET on any difference. Flynn class? Purpose?
      \\ \solution{Solution: }
     \important{MISD} (tightly-coupled lockstep). Purpose = \important{dependability}: detect a fault via the mismatch and fail safe (RESET), not to go faster.

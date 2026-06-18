@@ -1,6 +1,6 @@
 \section{L8 GPU Architectures / CUDA / OpenCL}
 
-\subsection{LZ1 GPU vs CPU}
+\subsection{GPU vs CPU}
 
 \mult{2}
 
@@ -22,13 +22,13 @@
     massive regular data parallelism, latency-tolerant $\to$ \important{GPU}; branchy, sequential, latency-sensitive $\to$ CPU.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ1 When is a GPU better?}
+\begin{example2}{Ex.\ When is a GPU better?}
     When does a GPU beat a CPU, and why?
      \\ \solution{Solution: }
     When there are many \important{independent identical} operations: the GPU runs thousands of threads and \important{hides latency} by switching between them (throughput). A CPU wins on branchy/sequential, latency-sensitive code.
 \end{example2}
 
-\subsection{LZ2 Thread $\leftrightarrow$ Loop / Kernel}
+\subsection{Thread $\leftrightarrow$ Loop / Kernel}
 
 \mult{2}
 
@@ -59,13 +59,13 @@ __kernel void vadd(__global float* a,
     \paragraph{Guard} \texttt{if (i < N)} the grid may overshoot.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ2 (s27/28) Loop to kernel}
+\begin{example2}{Ex.\ (s27/28) Loop to kernel}
     Rewrite \texttt{for(i<4096) c[i]=a[i]+b[i];} as a kernel; what replaces the loop?
      \\ \solution{Solution: }
     See the code box: \texttt{i=get\_global\_id(0); c[i]=a[i]+b[i];}. The \important{index space} (NDRange of 4096) replaces the loop one work-item per element.
 \end{example2}
 
-\subsection{LZ3 Block \& Grid Organisation}
+\subsection{Block \& Grid Organisation}
 
 \mult{2}
 
@@ -90,13 +90,13 @@ __kernel void vadd(__global float* a,
     \paragraph{Edge guard} \texttt{if (i<N \&\& j<N)}.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ3 (s6) Threads for [10][5]}
+\begin{example2}{Ex.\ (s6) Threads for [10][5]}
     Into how many threads does CUDA divide a \texttt{[10][5]} matrix op? Range of the threadID?
      \\ \solution{Solution: }
     \important{50} threads (10$\times$5). \texttt{threadIdx.x}$\in$\important{0..9}, \texttt{threadIdx.y}$\in$\important{0..4} IDs $(0,0)$ to $(9,4)$.
 \end{example2}
 
-\subsection{LZ4 Execution Model (Grid $\to$ SM $\to$ Warps)}
+\subsection{Execution Model (Grid $\to$ SM $\to$ Warps)}
 
 \mult{2}
 
@@ -117,13 +117,13 @@ __kernel void vadd(__global float* a,
     grid $\to$ GPU; blocks $\to$ SMs (extra blocks \emph{queued}); within an SM threads run as \important{32-thread warps} scheduled to hide latency.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ4 What is an SM?}
+\begin{example2}{Ex.\ What is an SM?}
     What is an SM, how many threads in a warp, and what's in a Fermi SM?
      \\ \solution{Solution: }
     \important{Streaming Multiprocessor}; a warp = \important{32} threads; Fermi SM = 32 CUDA cores + 4 SFU + 16 load/store units.
 \end{example2}
 
-\subsection{LZ5 Limitations \& Best Practices}
+\subsection{Limitations \& Best Practices}
 
 \mult{2}
 
@@ -150,13 +150,13 @@ __kernel void vadd(__global float* a,
     threadsPerBlock a multiple of 32; keep registers/shared-mem per block within the SM budget; over-subscribe with extra blocks (they queue and run as SMs free).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ5 (s10/11) Multiple of 32?}
+\begin{example2}{Ex.\ (s10/11) Multiple of 32?}
     Why make threads-per-block a multiple of 32? What happens to blocks that don't fit on an SM?
      \\ \solution{Solution: }
     Warps are \important{32} wide $\to$ a non-multiple wastes lanes. Blocks that don't fit are \important{queued} and run when an SM frees up (threads are cheap, so over-subscribe).
 \end{example2}
 
-\subsection{LZ6 Rendering Pipeline \& GPU Evolution}
+\subsection{Rendering Pipeline \& GPU Evolution}
 
 \begin{concept}{Fixed-Function $\to$ Generic}
     GPUs grew out of the \important{fixed-function shading pipeline} (vertex $\to$ raster $\to$ fragment). Unified programmable cores made them \emph{generic} (GPGPU); FUs are still developed for graphics. ``GPUs echo the shading pipeline.''
@@ -166,13 +166,13 @@ __kernel void vadd(__global float* a,
     dedicated per-stage shader hardware $\to$ \emph{fixed-function}; unified programmable cores running arbitrary kernels $\to$ \emph{generic} (GPGPU).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ6 Why generic?}
+\begin{example2}{Ex.\ Why generic?}
     What did GPUs evolve from, and why did they become generic?
      \\ \solution{Solution: }
     From a \important{fixed-function shading pipeline}. Unifying the shader stages into \important{programmable cores} let the same hardware run arbitrary compute kernels (GPGPU), not just graphics.
 \end{example2}
 
-\subsection{LZ7 OpenCL Models \& Platform}
+\subsection{OpenCL Models \& Platform}
 
 \mult{2}
 
@@ -190,13 +190,13 @@ __kernel void vadd(__global float* a,
     Platform = the hardware map; Execution = how kernels run (NDRange); Memory = the 4 regions; Programming = data vs task parallel. ICD = multi-vendor driver loader.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ7 Models \& hierarchy}
+\begin{example2}{Ex.\ Models \& hierarchy}
     Name the four OpenCL models and the platform hierarchy.
      \\ \solution{Solution: }
     \important{Platform / Execution / Memory / Programming}. Hierarchy: \important{Host $\to$ Device $\to$ CU $\to$ PE}; the ICD selects the vendor driver.
 \end{example2}
 
-\subsection{LZ8 Work-item / Work-group / NDRange}
+\subsection{Work-item / Work-group / NDRange}
 
 \mult{2}
 
@@ -221,13 +221,13 @@ __kernel void vadd(__global float* a,
     NDRange = total work-items (one per data element); split into work-groups (share local memory, run on one CU); index with \texttt{get\_global\_id} / \texttt{get\_local\_id}.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ8 (s26) 4096 work-items}
+\begin{example2}{Ex.\ (s26) 4096 work-items}
     NDRange of 4096 work-items in groups of 512 relate work-item / work-group / NDRange.
      \\ \solution{Solution: }
     \important{NDRange} = the 4096-index space; it splits into \important{work-groups} of 512 (each scheduled on one CU, sharing local memory); each \important{work-item} is one kernel instance with a \texttt{global\_id} (and a \texttt{local\_id} within its group).
 \end{example2}
 
-\subsection{LZ9 Command Queue}
+\subsection{Command Queue}
 
 \begin{definition}{command\_queue}
     Kernels are enqueued to the device. \important{In-order issuance} by the host; \important{in/out-of-order completion} by the device. The host can insist on in-order completion; otherwise the driver may re-schedule.
@@ -237,13 +237,13 @@ __kernel void vadd(__global float* a,
     Host controls \emph{issue} order; device controls \emph{completion} order (may reorder for efficiency) unless the host forces in-order.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ9 (s28) Who controls ordering?}
+\begin{example2}{Ex.\ (s28) Who controls ordering?}
     Who decides the order of issuance, and who the order of completion?
      \\ \solution{Solution: }
     The \important{host} issues in order; the \important{device/driver} decides completion order (in or out-of-order) unless the host insists on in-order completion.
 \end{example2}
 
-\subsection{LZ10 OpenCL Memory Model}
+\subsection{OpenCL Memory Model}
 
 \mult{2}
 
@@ -269,13 +269,13 @@ __kernel void vadd(__global float* a,
     shared by all $\to$ Global; read-only broadcast $\to$ Constant; shared in a work-group $\to$ Local; scratch per work-item $\to$ Private. The host stages data with \texttt{clCreateBuffer}.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ10 Where + how consistent?}
+\begin{example2}{Ex.\ Where + how consistent?}
     Where does a value visible to all work-items live, and what does weak consistency mean here?
      \\ \solution{Solution: }
     \important{Global} memory. Weak consistency = updates are only guaranteed visible at \important{sync points} (a work-group barrier, or host-level for global) not continuously.
 \end{example2}
 
-\subsection{LZ11 OpenCL Synchronisation}
+\subsection{OpenCL Synchronisation}
 
 \begin{definition}{Within a Work-group Only}
     No sync \emph{between} work-groups only within one.
@@ -290,19 +290,19 @@ __kernel void vadd(__global float* a,
     inside a work-group $\to$ barrier / fence / atomics. Across work-groups $\to$ \emph{not possible} in-kernel: split into separate kernels or synchronise at the host.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ11 (s33) Coordinate work-items}
+\begin{example2}{Ex.\ (s33) Coordinate work-items}
     Two work-items in the same group need to coordinate; what about two in different groups?
      \\ \solution{Solution: }
     Same group: \important{barrier / memory fence / atomics}. Different groups: \important{no in-kernel sync} split the work into separate kernels or synchronise at the host.
 \end{example2}
 
-\subsection{LZ12 AMP Recap}
+\subsection{AMP Recap}
 
 \begin{KR}{Recipe: Set Up AMP (recap)}
     same ISA $\to$ SMP/big.LITTLE under one OS; \important{different ISA $\to$ separate OS + openAMP} (\texttt{remoteproc} boots the ELF; \texttt{rpmsg}/\texttt{virtio} carry messages). Two IPC methods: shared memory + signalling.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ12 (s40/41) Different ISA under one OS?}
+\begin{example2}{Ex.\ (s40/41) Different ISA under one OS?}
     Can different-ISA cores run under a single OS? How are they coupled?
      \\ \solution{Solution: }
     \important{No} one kernel targets one ISA. Couple them with \important{openAMP}: \texttt{remoteproc} + \texttt{rpmsg}/\texttt{virtio} (same as L7).

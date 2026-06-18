@@ -1,6 +1,6 @@
 \section{L3 OpenMP}
 
-\subsection{LZ1 Introduction \& Model}
+\subsection{Introduction \& Model}
 
 \mult{2}
 
@@ -29,13 +29,13 @@
     \paragraph{Mind the barrier} threads join at the implicit barrier (drop it with \texttt{nowait}).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ1 Components \& barrier}
+\begin{example2}{Ex.\ Components \& barrier}
     Name the three components of OpenMP. What happens at the end of a parallel region?
      \\ \solution{Solution: }
     \important{Runtime library}, \important{compiler directives}, \important{environment variables}. At the region's end there is an \important{implicit barrier} all threads join before the master continues.
 \end{example2}
 
-\subsection{LZ2 Data Scope \& Worksharing}
+\subsection{Data Scope \& Worksharing}
 
 \mult{2}
 
@@ -95,7 +95,7 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
     \texttt{\#pragma omp parallel for reduction(+:sum)}: each thread builds a \important{private partial} (e.g.\ \texttt{a[0..2]}, \texttt{a[3..5]}, \texttt{a[6..8]}); after the join OpenMP adds the partials.
 \end{example2}
 
-\subsection{LZ3 IPC Synchronisation (Critical Sections)}
+\subsection{IPC Synchronisation (Critical Sections)}
 
 \mult{2}
 
@@ -118,13 +118,13 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
     single memory op $\to$ \texttt{atomic}; a block $\to$ \texttt{critical}; accumulate $\to$ \texttt{reduction}; processes $\to$ semaphore; threads $\to$ mutex; reusable handle $\to$ omp lock.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ3 Increment a shared counter}
+\begin{example2}{Ex.\ Increment a shared counter}
     Give three ways to make \texttt{count++} safe across threads, and the cheapest.
      \\ \solution{Solution: }
     \texttt{\#pragma omp atomic}, \texttt{\#pragma omp critical}, or a mutex/semaphore. \important{Cheapest = \texttt{atomic}} (uses a HW test-and-set; \texttt{critical}/locks are heavier).
 \end{example2}
 
-\subsection{LZ4 Thread Synchronisation (Barriers)}
+\subsection{Thread Synchronisation (Barriers)}
 
 \mult{2}
 
@@ -150,13 +150,13 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
     need a wall $\to$ barrier; want overlap (no wait) $\to$ \texttt{nowait}; need ordered output $\to$ \texttt{ordered}; tune spin-vs-block via \texttt{OMP\_WAIT\_POLICY}.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ4 (s18) Barrier internals}
+\begin{example2}{Ex.\ (s18) Barrier internals}
     On arrival, wait-queue or busy-loop which is preferable? Once released, who goes first?
      \\ \solution{Solution: }
     \important{Depends}: short wait + spare cores $\to$ busy-loop (spin); long/oversubscribed $\to$ wait-queue (block). Release order = \important{OS scheduler, nondeterministic}; use \texttt{ordered} if order matters.
 \end{example2}
 
-\subsection{LZ5 Scheduling \& Task Management}
+\subsection{Scheduling \& Task Management}
 
 \mult{2}
 
@@ -195,7 +195,7 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
     \important{\texttt{dynamic}} (or \texttt{guided}) threads grab work as they finish, balancing the uneven load. \texttt{static} would leave fast threads idle.
 \end{example2}
 
-\subsection{LZ6 Runtime Interface}
+\subsection{Runtime Interface}
 
 \begin{definition}{Thread-Count Precedence}
     \texttt{if} clause $\to$ \texttt{num\_threads} $\to$ \texttt{omp\_set\_num\_threads()} $\to$ \texttt{OMP\_NUM\_THREADS} $\to$ default ($\approx$ \#CPUs). May exceed cores up to \texttt{OMP\_THREAD\_LIMIT}. Static $\to$ exact; dynamic $\to$ upper bound.
@@ -205,7 +205,7 @@ for(int i=0;i<n;i++) b=a+i;        // section 2
     Walk the precedence list top-down; the first one set wins. Query at run with \texttt{omp\_get\_num\_threads} / \texttt{omp\_get\_thread\_num}.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ6 Who wins?}
+\begin{example2}{Ex.\ Who wins?}
     \texttt{OMP\_NUM\_THREADS=8}, but the region is \texttt{\#pragma omp parallel num\_threads(4)}. How many threads?
      \\ \solution{Solution: }
     \important{4} \texttt{num\_threads} outranks the environment variable in the precedence list.

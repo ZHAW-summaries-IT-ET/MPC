@@ -1,6 +1,6 @@
 \section{L6 Memory}
 
-\subsection{LZ1 Cache \& Paging}
+\subsection{Cache \& Paging}
 
 \mult{2}
 
@@ -28,7 +28,7 @@
     cache: hit serve / miss fetch a line (exploit locality). paging: page$\to$frame via page table; keep only the working set resident.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ1 Why is a[1] fast after a[0]?}
+\begin{example2}{Ex.\ Why is a[1] fast after a[0]?}
     Reading \texttt{a[0]} misses but \texttt{a[1..15]} are fast. Why? And resident vs working set?
      \\ \solution{Solution: }
     The miss on \texttt{a[0]} fetches the \important{whole line} (incl.\ \texttt{a[1..15]}) $\to$ subsequent reads are \important{hits} (spatial locality). Resident = pages in memory; working = pages in use now.
@@ -55,7 +55,7 @@
     % INSERT IMAGE: L6 slide 6/7 Simple Computer System walk
 \end{example2}
 
-\subsection{LZ2 Thrashing}
+\subsection{Thrashing}
 
 \mult{2}
 
@@ -76,13 +76,13 @@
     repeated misses on the \emph{same cache slot} $\to$ cache thrash (fix: layout/associativity); constant page evict/reload (too few frames) $\to$ disk thrash (fix: fewer resident processes / more memory).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ2 Same-slot loop}
+\begin{example2}{Ex.\ Same-slot loop}
     A loop alternately touches two variables that map to the same cache line, then needs the first again. What happens?
      \\ \solution{Solution: }
     \important{Cache thrashing}: each access evicts the other $\to$ repeated misses $\to$ CPU stalled.
 \end{example2}
 
-\subsection{LZ3 Cost of Cache-Oblivious Code}
+\subsection{Cost of Cache-Oblivious Code}
 
 \begin{concept}{Context-Switch Cost}
     \begin{itemize}
@@ -96,13 +96,13 @@
     cache + TLB dominate (must be flushed/re-warmed). Expect CPI to spike right after a switch, then fall as caches re-fill.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ3 CPI after a switch}
+\begin{example2}{Ex.\ CPI after a switch}
     After a context switch, why does CPI spike then fall over the next thousands of instructions?
      \\ \solution{Solution: }
     The cache + TLB are flushed $\to$ a burst of \important{misses + page-walks} $\to$ high CPI; as they \important{re-warm}, CPI drops back. This is the cost of not programming cache-aware.
 \end{example2}
 
-\subsection{LZ4 Multicore L1/L2 (Read \& Writeback)}
+\subsection{Multicore L1/L2 (Read \& Writeback)}
 
 \mult{2}
 
@@ -123,13 +123,13 @@
     Check the dirty bit: dirty + (controller decision or eviction) $\to$ write back first. Clean line $\to$ just refill. Multicore: an L1 flush cascades to L2.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ4 Read then flush}
+\begin{example2}{Ex.\ Read then flush}
     (a) Two cores read \texttt{var1} what's in their caches? (b) When does a dirty line actually get written back?
      \\ \solution{Solution: }
     (a) Both get a \emph{copy} in their L1 from the shared L2 read-sharing is fine, no invalidation until a write. (b) When the controller decides \emph{or} it needs the line (eviction) and the line is \important{dirty}.
 \end{example2}
 
-\subsection{LZ5 Coherence \& Consistency}
+\subsection{Coherence \& Consistency}
 
 \mult{2}
 
@@ -151,13 +151,13 @@
     One location, ``is the write seen and in order?'' $\to$ \emph{coherence}. Multiple locations, ``in what order are they seen?'' $\to$ \emph{consistency} (strong = all hazards barred, slow; release = order only at barriers, fast).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ5 The read sequences}
+\begin{example2}{Ex.\ The read sequences}
     P1 observes reads 0-1-1-2 while P2 observes 0-2-1-2. What is violated and what is needed? What is release consistency?
      \\ \solution{Solution: }
     The two cores see writes in \emph{different} order $\to$ a \important{coherence protocol} must make P2 observe P1's write order. \important{Release consistency} = ordering is enforced \emph{only} at explicit synchronisation (memory barriers), maximising performance elsewhere.
 \end{example2}
 
-\subsection{LZ6 Managing Coherence}
+\subsection{Managing Coherence}
 
 \mult{2}
 
@@ -175,13 +175,13 @@
     small bus-based system $\to$ \emph{snooping} (broadcast + invalidate). many cores $\to$ \emph{directory} (owner $\to$ invalidate sharers $\to$ ack $\to$ write $\to$ new owner).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ6 P1 writes a shared line}
+\begin{example2}{Ex.\ P1 writes a shared line}
     \texttt{var1} is cached in both P1 and P2; P1 writes it. Trace it under snooping, then under a directory.
      \\ \solution{Solution: }
     \important{Snooping}: P1 broadcasts the write on the bus $\to$ P2's copy invalidated. \important{Directory}: P1 tells the owner $\to$ owner invalidates P2 $\to$ ack $\to$ P1 writes and becomes owner.
 \end{example2}
 
-\subsection{LZ7 False Sharing}
+\subsection{False Sharing}
 
 \begin{definition}{False Sharing}
     Two cores write \emph{different} variables that sit in the \emph{same} cache line $\to$ the line ping-pongs between caches (useless coherence traffic).
@@ -191,7 +191,7 @@
     same line in $\geq$2 caches + writes to \emph{different} vars $\to$ false sharing. Fix: \important{pad/align} the variables onto separate cache lines.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ7 Adjacent counters}
+\begin{example2}{Ex.\ Adjacent counters}
     Two cores each increment \texttt{v[0]} and \texttt{v[1]} (same line). Problem and fix?
      \\ \solution{Solution: }
     \important{False sharing}: each write invalidates the other's copy $\to$ line ping-pongs. Fix: pad/align so the two vars are on \important{separate lines}.
@@ -213,7 +213,7 @@
     Preserve its cache/TLB lines via \important{ASID}/physical tagging and \important{pin} it to that core (affinity) avoids the flush + re-warm cost.
 \end{example2}
 
-\subsection{LZ8 Memory Architectures}
+\subsection{Memory Architectures}
 
 \mult{2}
 
@@ -239,7 +239,7 @@
     equal access $\to$ UMA (bus latency limits to $\sim$4 CPUs); fast-local/slow-remote $\to$ NUMA; interleaved-to-fake-contiguous $\to$ SUMA. Keep data local for cache affinity.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ8 Limits \& OS support}
+\begin{example2}{Ex.\ Limits \& OS support}
     Why does the traditional bus cap at $\sim$4 CPUs? Distinguish UMA/NUMA/SUMA. How does Linux handle NUMA?
      \\ \solution{Solution: }
     Bus latency grows with length $\to$ $\sim$4-CPU sweet spot. \important{UMA} equal access; \important{NUMA} fast local + slow remote (ccNUMA); \important{SUMA} interleaved $\to$ best-case UMA. Linux maps \emph{cells}$\to$\emph{nodes}, keeps memory local, uses \important{zonelists} by distance + \texttt{taskset}/\texttt{numactl}.

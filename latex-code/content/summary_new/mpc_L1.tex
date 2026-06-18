@@ -1,6 +1,6 @@
 \section{L1 Introduction \& Task Decomposition}s
 
-\subsection{LZ1 Vocabulary \& Platform Model}
+\subsection{Vocabulary \& Platform Model}
 
 \mult{2}
 
@@ -29,13 +29,13 @@
     \paragraph{Identify UEs} each spawned process/thread; a \emph{task} is one work slice it runs.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ1 CB1 / Jetson terminology}
+\begin{example2}{Ex.\ CB1 / Jetson terminology}
     Programming on the CB1, delegating to the Jetson Nano. Map the platform; and what are the two meanings of ``task''?
      \\ \solution{Solution: }
     CB1 = \important{Host}; Nano = \important{Device}; Nano SMs = CUs; CUDA cores = PEs; ALU/FPU = FU; spawned threads = UEs. ``Task'' = a process/thread (Linux) \emph{or} a piece of parallel work (here, one Sobel slice).
 \end{example2}
 
-\subsection{LZ2 General Solutions (Algorithm Structure)}
+\subsection{General Solutions (Algorithm Structure)}
 
 \begin{concept}{Pattern Hierarchy}
     Worked top$\to$bottom: Finding Concurrency $\to$ Algorithm Structure $\to$ Supporting Structure $\to$ Implementation Mechanisms.
@@ -56,13 +56,13 @@
     \paragraph{Map} task+linear $\to$ Task Parallelism; task+recursive $\to$ Divide \& Conquer; data+array $\to$ Geometric Decomposition; data+recursive $\to$ Recursive Data; flow $\to$ Pipeline / Event-Based.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ2 Pick the pattern}
+\begin{example2}{Ex.\ Pick the pattern}
     (a) Sobel applies the same kernel to every image region. (b) Quicksort recursively splits an array. Which Algorithm-Structure pattern each?
      \\ \solution{Solution: }
     (a) Organise by \important{data}, array $\Rightarrow$ \important{Geometric Decomposition}. (b) Organise by \important{task}, recursive $\Rightarrow$ \important{Divide \& Conquer}.
 \end{example2}
 
-\subsection{LZ3 Top-Down Pattern Path}
+\subsection{Top-Down Pattern Path}
 
 \begin{concept}{Layer $\to$ Pattern (Sobel)}
     \begin{itemize}
@@ -77,13 +77,13 @@
     Walk the four layers in order, choosing one pattern per layer for your problem: expose concurrency $\to$ organise the algorithm $\to$ pick supporting structures $\to$ map to threads/processes.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ3 Trace Sobel through the layers}
+\begin{example2}{Ex.\ Trace Sobel through the layers}
     Name the chosen pattern at each of the four layers for Sobel.
      \\ \solution{Solution: }
     Finding Concurrency: \important{task decomposition + dependency analysis}; Algorithm Structure: \important{task parallelism} (and geometric decomposition for the data view); Supporting Structure: \important{fork/join}; Implementation: \important{processes \& threads}.
 \end{example2}
 
-\subsection{LZ4 Task Decomposition}
+\subsection{Task Decomposition}
 
 \mult{2}
 
@@ -122,13 +122,13 @@
     \paragraph{Check solution space} enough tasks for all cores; as independent + distinct as possible.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ4 Decompose Sobel}
+\begin{example2}{Ex.\ Decompose Sobel}
     Split Sobel into tasks. How many distinct actions? Independent tasks? Functional or loop splitting?
      \\ \solution{Solution: }
     6 functional tasks; \important{6} distinct actions; only \texttt{sobel\_x},\texttt{sobel\_y} independent. Functional split = limited (2-way); \important{loop/region splitting} scales to all cores.
 \end{example2}
 
-\subsection{LZ5 CFG vs Call Graph}
+\subsection{CFG vs Call Graph}
 
 \begin{definition}{CFG vs Call Graph}
     \begin{itemize}
@@ -141,7 +141,7 @@
     Ask: \emph{possible} paths (static, compiler/optimiser) $\to$ CFG; \emph{actual} calls observed (dynamic, profiler) $\to$ call graph.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ5 Which graph?}
+\begin{example2}{Ex.\ Which graph?}
     (a) A profiler reports which functions actually called which, and how often. (b) A diagram of every branch the program could take. Which is which?
      \\ \solution{Solution: }
     (a) \important{Call graph} (actual, dynamic, profiler). (b) \important{CFG} (all possible paths, static).
@@ -175,7 +175,7 @@
     \important{Data Sharing}. Group \texttt{sobel\_x/y} (same grey input); order \texttt{sobel\_all} after both; grey = read-only, kernel = effectively-local, \texttt{Gx/Gy} = read-write, \texttt{sobel\_all} = \important{accumulate}.
 \end{example2}
 
-\subsection{LZ6 Task-Parallelism Dependencies}
+\subsection{Task-Parallelism Dependencies}
 
 \begin{definition}{Dependencies}
     \begin{itemize}
@@ -195,13 +195,13 @@
     \paragraph{Data?} try to make it \emph{removable} (transform) or \emph{separable} (replicate + combine, e.g.\ reduction).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ6 Classify the dependencies}
+\begin{example2}{Ex.\ Classify the dependencies}
     Tasks all add into one shared \texttt{sum}. What dependency is this, and how do you parallelise it?
      \\ \solution{Solution: }
     A \important{data dependency} on \texttt{sum}. It is \important{separable}: give each UE a private partial sum (replicated data), then combine i.e.\ a \emph{reduction}. (By contrast \texttt{sobel\_x}$\parallel$\texttt{sobel\_y} are embarrassingly parallel; \texttt{sobel\_all} has an \emph{order} dependency on both.)
 \end{example2}
 
-\subsection{LZ7 Scheduling (Task $\to$ UE)}
+\subsection{Scheduling (Task $\to$ UE)}
 
 \mult{2}
 
@@ -227,7 +227,7 @@
     equal/predictable load $\to$ \emph{static} (low overhead); uneven/unknown $\to$ \emph{dynamic} queue; idle UEs + imbalance $\to$ \emph{work-stealing} (at extra complexity).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ7 Pick a schedule}
+\begin{example2}{Ex.\ Pick a schedule}
     6 equal Sobel chunks on 4 cores. Static or dynamic? Why?
      \\ \solution{Solution: }
     6 on 4 leaves an uneven last round, so prefer \important{dynamic} (or make \#chunks a multiple of 4). If chunks are truly equal \emph{and} divide the cores, \emph{static} wins on low overhead. \emph{Work-stealing} helps if some chunks run long.

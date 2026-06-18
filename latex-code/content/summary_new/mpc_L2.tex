@@ -1,6 +1,6 @@
 \section{L2 Data Decomposition}
 
-\subsection{LZ1 General Solutions (Algorithm Structure)}
+\subsection{General Solutions (Algorithm Structure)}
 
 \begin{concept}{Algorithm-Structure Decision Tree}
     Pick by the \emph{major organising principle} $\times$ \emph{structure}:
@@ -17,13 +17,13 @@
     \paragraph{Map} task+linear $\to$ Task Parallelism; task+recursive $\to$ Divide \& Conquer; data+array $\to$ Geometric Decomposition; data+recursive $\to$ Recursive Data.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ1 Pick the general solution}
+\begin{example2}{Ex.\ Pick the general solution}
     A streamed $1024\times1024$ greyscale image, same filter applied per pixel. Which general solution, and why not task parallelism?
      \\ \solution{Solution: }
     Organise by \important{data}, array structure $\Rightarrow$ \important{Geometric Decomposition}. Task parallelism gives only a handful of functional tasks; the data view scales with the number of image regions.
 \end{example2}
 
-\subsection{LZ2 The Top-Down Path}
+\subsection{The Top-Down Path}
 
 \mult{2}
 
@@ -52,13 +52,13 @@
     For each layer state \emph{why} the pattern fits: expose concurrency (data vs task) $\to$ analyse dependencies (what is shared) $\to$ organise the algorithm (stencil $\Rightarrow$ geometric) $\to$ choose supporting structures (loop parallelism + distributed array) $\to$ map to UEs (SPMD).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ2 Justify the path for Sobel}
+\begin{example2}{Ex.\ Justify the path for Sobel}
     Walk the top-down path and justify each pattern choice.
      \\ \solution{Solution: }
     \important{Data Decomposition} (image is a big array, op is per-region); \important{Dependency Analysis} (grey = read-only, only a 1-px ghost halo shared); \important{Geometric Decomposition} (local $3\times3$ stencil); \important{Loop Parallelism} (split the pixel loops); \important{Distributed Array} (hand chunks to UEs); \important{SPMD} (each UE runs the same code, indexed by rank).
 \end{example2}
 
-\subsection{LZ3 Granularity}
+\subsection{Granularity}
 
 \mult{2}
 
@@ -89,13 +89,13 @@
     \paragraph{Compact shape} minimise surface/volume (square $>$ strip).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ3 Estimate the overhead}
+\begin{example2}{Ex.\ Estimate the overhead}
     $1024\times1024$ image in $1024\times128$ strips. Estimate communication vs computation.
      \\ \solution{Solution: }
     Compute $\approx 1024\cdot128 = 131072$\,px (volume); ghost $\approx 2\times1024 = 2048$\,px (surface) $\Rightarrow$ comm/compute $\approx$ \important{1.6\%} overhead negligible, so this granularity is fine.
 \end{example2}
 
-\subsection{LZ4 Efficiency \& Mapping Chunks to UEs}
+\subsection{Efficiency \& Mapping Chunks to UEs}
 
 \mult{2}
 
@@ -115,13 +115,13 @@
     \paragraph{Locality} pin UEs to cores so caches stay warm.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ4 Map 6 chunks to 4 UEs}
+\begin{example2}{Ex.\ Map 6 chunks to 4 UEs}
     How do you map 6 chunks onto 4 UEs for good load balance?
      \\ \solution{Solution: }
     Over-decompose (6 $>$ 4) so a UE that finishes early takes the next chunk; assign round-robin or via a \important{dynamic queue}; pin UEs for cache affinity. Equal chunks divisible by UEs $\Rightarrow$ static is cheaper.
 \end{example2}
 
-\subsection{LZ5 Communication of Indices}
+\subsection{Communication of Indices}
 
 \begin{definition}{Index Mapping}
     UEs work on \emph{local} copies/indices, but the array has \emph{global} indices.
@@ -137,7 +137,7 @@
     \paragraph{Locality} keep each chunk spatially contiguous to stay cache-friendly.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ5 Local vs global indices}
+\begin{example2}{Ex.\ Local vs global indices}
     A UE owns rows 128--255 of a 1024-row image. What index info does it need, and why does locality matter?
      \\ \solution{Solution: }
     Its global \important{offset} (128): local row $r$ maps to global $r+128$. It also needs neighbour boundary rows (\important{127} and \important{256}) as ghosts. Processing its contiguous band keeps spatially-related data in cache (cache/memory locality).

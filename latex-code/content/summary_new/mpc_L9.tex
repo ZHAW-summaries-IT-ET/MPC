@@ -1,6 +1,6 @@
 \section{L9 MPI (Message Passing Interface)}
 
-\subsection{LZ1 Distributed Architectures}
+\subsection{Distributed Architectures}
 
 \mult{2}
 
@@ -22,13 +22,13 @@
     match the protocol to the data shape; \emph{always} handle endianness, a defined wire format, and channel reliability.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ1 Struct across machines}
+\begin{example2}{Ex.\ Struct across machines}
     You send a C struct from a big-endian to a little-endian node. What must you handle?
      \\ \solution{Solution: }
     \important{Endianness} conversion, a defined \important{wire format} (the interface), and channel \important{reliability}. (MPI derived datatypes help with the format.)
 \end{example2}
 
-\subsection{LZ2 The Six Fundamental Operations}
+\subsection{The Six Fundamental Operations}
 
 \mult{2}
 
@@ -56,13 +56,13 @@
     \end{itemize}
 \end{KR}
 
-\begin{example2}{Ex.\ LZ2 Name the six}
+\begin{example2}{Ex.\ Name the six}
     List the six fundamental MPI operations and what each does.
      \\ \solution{Solution: }
     \important{Init} (start), \important{Comm\_size} (\#procs), \important{Comm\_rank} (my rank), \important{Send}, \important{Recv}, \important{Finalize} (exit).
 \end{example2}
 
-\subsection{LZ3 Communication Models}
+\subsection{Communication Models}
 
 \mult{2}
 
@@ -86,13 +86,13 @@
     one rank to one rank $\to$ point-to-point; one-to-many / many-to-one / all-to-all $\to$ a collective (more efficient, e.g.\ tree Bcast).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ3 Communicator / rank}
+\begin{example2}{Ex.\ Communicator / rank}
     What is a communicator and a rank? When do you use a collective over point-to-point?
      \\ \solution{Solution: }
     A \important{communicator} groups processes (\texttt{MPI\_COMM\_WORLD}); a \important{rank} is a process's index. Use a \important{collective} for group-wide data movement (broadcast/scatter/gather/reduce); point-to-point for pairwise messages.
 \end{example2}
 
-\subsection{LZ4 The Run-time}
+\subsection{The Run-time}
 
 \mult{2}
 
@@ -118,13 +118,13 @@
     build with \texttt{mpicc}; run \texttt{mpirun -n X} for X ranks; over-subscribing (procs $>$ cores) degrades IPC; pin with \texttt{--cpu-set}.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ4 Build / run / oversubscribe}
+\begin{example2}{Ex.\ Build / run / oversubscribe}
     How do you build and run an MPI program on 4 cores? What does oversubscribing do?
      \\ \solution{Solution: }
     \texttt{mpicc -o prog prog.c}; \texttt{mpirun -n 4 ./prog}. \important{Oversubscribing} (more processes than cores) \important{degrades IPC} tell \texttt{mpirun} the slot count.
 \end{example2}
 
-\subsection{LZ5 Blocking vs Non-blocking}
+\subsection{Blocking vs Non-blocking}
 
 \begin{definition}{Blocking vs Non-blocking}
     \begin{itemize}
@@ -138,13 +138,13 @@
     simple / need the buffer reusable now $\to$ blocking. Want to \emph{overlap} comms with compute $\to$ non-blocking (post \texttt{Isend}/\texttt{Irecv}, compute, then \texttt{Wait}).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ5 Why non-blocking?}
+\begin{example2}{Ex.\ Why non-blocking?}
     When would you choose non-blocking communication?
      \\ \solution{Solution: }
     To \important{overlap communication with computation}: post \texttt{Isend}/\texttt{Irecv}, do useful work, then \texttt{Wait} hiding transfer latency.
 \end{example2}
 
-\subsection{LZ6 The Four Blocking Send Modes}
+\subsection{The Four Blocking Send Modes}
 
 \mult{2}
 
@@ -168,13 +168,13 @@
     default $\to$ Standard; guaranteed/safe $\to$ Ssend; decouple sender from receiver $\to$ Bsend; receiver already waiting $\to$ Rsend.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ6 Safest vs cheapest}
+\begin{example2}{Ex.\ Safest vs cheapest}
     Which blocking send mode is safest, and which has the lowest overhead (and its precondition)?
      \\ \solution{Solution: }
     \important{Synchronous} (\texttt{Ssend}) is safest (handshake). \important{Ready} (\texttt{Rsend}) has the lowest overhead but the \important{receive must already be posted}.
 \end{example2}
 
-\subsection{LZ7 Non-blocking Send/Recv}
+\subsection{Non-blocking Send/Recv}
 
 \begin{definition}{Isend / Irecv}
     Return a \emph{request} immediately.
@@ -188,13 +188,13 @@
     \texttt{Isend}/\texttt{Irecv} $\to$ do independent work $\to$ \texttt{Wait} (or poll with \texttt{Test}) \emph{before} reusing the buffer.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ7 Did it finish?}
+\begin{example2}{Ex.\ Did it finish?}
     After an \texttt{MPI\_Isend}, how do you know the transfer is done?
      \\ \solution{Solution: }
     Check the request: \important{\texttt{MPI\_Wait}} (blocks until complete) or \important{\texttt{MPI\_Test}} (polls). Don't reuse the buffer before it completes.
 \end{example2}
 
-\subsection{LZ8 Message Structure \& Data Types}
+\subsection{Message Structure \& Data Types}
 
 \mult{2}
 
@@ -216,13 +216,13 @@
     body = (buf, count, datatype); envelope = (dst/src, tag, comm). Sending a struct? define a \important{derived datatype} so both ends interpret the bytes identically.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ8 Two parts + a struct}
+\begin{example2}{Ex.\ Two parts + a struct}
     What two parts make up an MPI message, and how do you send a C struct?
      \\ \solution{Solution: }
     \important{Envelope} (dst/src, tag, comm) + \important{body} (buf, count, datatype). For a struct, build a \important{derived datatype} with \texttt{MPI\_Type\_create\_struct}.
 \end{example2}
 
-\subsection{LZ9 Collectives}
+\subsection{Collectives}
 
 \mult{2}
 
@@ -243,13 +243,13 @@
     same data to everyone $\to$ \texttt{Bcast}; split data across ranks $\to$ \texttt{Scatter}; collect results $\to$ \texttt{Gather}; combine $\to$ \texttt{Reduce}.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ9 Distribute then collect}
+\begin{example2}{Ex.\ Distribute then collect}
     Give every rank the full matrix, then collect each rank's row-results. Which collectives?
      \\ \solution{Solution: }
     \important{Bcast} the matrix (all need it) or \texttt{Scatter} if each rank only needs its rows then \important{Gather} the results to the root.
 \end{example2}
 
-\subsection{LZ10 Reduction}
+\subsection{Reduction}
 
 \begin{definition}{MPI\_Reduce}
     \texttt{MPI\_Reduce(send, recv, count, type, op, root, comm)} combines a value from every rank with an op (\texttt{SUM}/\texttt{MAX}/\texttt{MIN}/\texttt{PROD}\ldots), element-wise on arrays. \texttt{Allreduce} $\to$ result to all.
@@ -259,7 +259,7 @@
     each rank holds a partial $\to$ pick the op $\to$ \texttt{MPI\_Reduce} to a root (or \texttt{Allreduce} to every rank).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ10 Combine partial sums}
+\begin{example2}{Ex.\ Combine partial sums}
     Every rank computed a partial sum; produce the total at rank 0.
      \\ \solution{Solution: }
     \important{\texttt{MPI\_Reduce(\&partial, \&total, 1, MPI\_INT, MPI\_SUM, 0, MPI\_COMM\_WORLD)}}. Use \texttt{Allreduce} if every rank needs the total.

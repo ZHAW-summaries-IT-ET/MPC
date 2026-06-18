@@ -1,6 +1,6 @@
 \section{L7 CPU Architectures}
 
-\subsection{LZ1 GP-CPU Architectures}
+\subsection{GP-CPU Architectures}
 
 \mult{2}
 
@@ -26,13 +26,13 @@
     shared I+D bus $\to$ Von Neumann; fully separate $\to$ Harvard; \emph{split L1 I/D but unified L2/RAM} $\to$ \important{Modified Harvard}. Datasheet cue: separated I/D caches.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ1 (s5) A53 architecture}
+\begin{example2}{Ex.\ (s5) A53 architecture}
     A53: L1-I (2-way) and L1-D (4-way) separate, unified L2 (16-way). What architecture?
      \\ \solution{Solution: }
     \important{Modified Harvard}: Harvard inside (split L1), von Neumann outside (unified L2/memory).
 \end{example2}
 
-\subsection{LZ2 Parallelising a CPU}
+\subsection{Parallelising a CPU}
 
 \begin{concept}{Four Ways}
     \begin{itemize}
@@ -47,13 +47,13 @@
     multiple FUs (VLIW) $=$ data; multiple pipelines (superscalar) $=$ instruction; idle slots filled by a 2nd thread $=$ SMT; separate cores $=$ multicore/AMP.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ2 Name the four}
+\begin{example2}{Ex.\ Name the four}
     List four ways to add parallelism inside a CPU and the kind each provides.
      \\ \solution{Solution: }
     \important{Multicore}; \important{multiple FUs} (data); \important{multiple pipelines} (instruction); \important{heterogeneous PEs} (DSP/GPU). The ALU is not the only option (e.g.\ FPU/MAC for DSP work).
 \end{example2}
 
-\subsection{LZ3 Multiple FUs: VLIW / DSP}
+\subsection{Multiple FUs: VLIW / DSP}
 
 \mult{2}
 
@@ -79,13 +79,13 @@
     separate program/data bus keeping a MAC fed $\to$ Harvard DSP; one wide instruction the \emph{compiler} packed per FU $\to$ VLIW (+ software pipelining).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ3 (s8) DSP with .M/.D/.L/.S}
+\begin{example2}{Ex.\ (s8) DSP with .M/.D/.L/.S}
     What memory architecture is this? How does execution work?
      \\ \solution{Solution: }
     \important{Harvard} (separate program/data bus). Execution = \important{VLIW}: the compiler packs one op per FU into a wide word, run in parallel (+ software pipelining). Big, incompatible code.
 \end{example2}
 
-\subsection{LZ4 CISC/RISC \& Hazards}
+\subsection{CISC/RISC \& Hazards}
 
 \mult{2}
 
@@ -110,13 +110,13 @@
     two instructions need the same unit $\to$ structural; one needs another's result $\to$ data; a branch changes the path $\to$ control.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ4 Why RISC pipelines better}
+\begin{example2}{Ex.\ Why RISC pipelines better}
     Why is RISC more pipeline-friendly than CISC? Name the three hazard types.
      \\ \solution{Solution: }
     Uniform load/store instructions fit a fixed pipeline cleanly (CISC needs microcode for variable, complex instructions). Hazards: \important{structural / data / control}.
 \end{example2}
 
-\subsection{LZ5 Superpipeline vs Superscalar}
+\subsection{Superpipeline vs Superscalar}
 
 \mult{2}
 
@@ -134,13 +134,13 @@
     deeper (finer stages, faster issue) $=$ superpipeline; wider (more pipelines, several/cycle) $=$ superscalar.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ5 Distinguish}
+\begin{example2}{Ex.\ Distinguish}
     What is the difference between superpipelining and superscalar?
      \\ \solution{Solution: }
     \important{Superpipeline} = more/finer stages (issue faster); \important{superscalar} = more pipelines (several issued per cycle).
 \end{example2}
 
-\subsection{LZ6 In/Out-of-Order Execution}
+\subsection{In/Out-of-Order Execution}
 
 \begin{definition}{Three Modes}
     \begin{itemize}
@@ -154,13 +154,13 @@
     Ask whether \emph{issue} and \emph{execution} keep program order. Both ordered = simplest; OoO issue + OoO exec = most aggressive (best unit utilisation, most hardware).
 \end{KR}
 
-\begin{example2}{Ex.\ LZ6 Which is most aggressive?}
+\begin{example2}{Ex.\ Which is most aggressive?}
     Name the three superscalar scheduling modes; which extracts the most parallelism?
      \\ \solution{Solution: }
     In-order/in-order; in-order issue/OoO exec; \important{OoO issue + OoO exec} (the most aggressive, needs the most scheduling hardware).
 \end{example2}
 
-\subsection{LZ7 Co-processors}
+\subsection{Co-processors}
 
 \mult{2}
 
@@ -186,13 +186,13 @@
     CPU offloads unknown instructions; co-pro has its own ISA/clock/memory; the two need synchronisation (CPU may stall); good only for generic ops.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ7 8087 / 8086}
+\begin{example2}{Ex.\ 8087 / 8086}
     How does the CPU handle an instruction it doesn't recognise, and what's the catch with the 8087?
      \\ \solution{Solution: }
     It \important{passes it to the co-pro}; if unrecognised there too $\to$ exception. Catch: the 8086 \important{stalls} while the 8087 performs \texttt{FMUL} (a pipeline/sync effect).
 \end{example2}
 
-\subsection{LZ8 SMT (Hyperthreading)}
+\subsection{SMT (Hyperthreading)}
 
 \begin{concept}{SMT}
     A core runs 2 threads to use otherwise-idle resources (4 cores $\to$ 8 threads).
@@ -206,13 +206,13 @@
     SMT fills idle issue slots with a 2nd thread $\Rightarrow$ only worthwhile on a superscalar core; pin a process to a core to control it.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ8 (s19) Why superscalar?}
+\begin{example2}{Ex.\ (s19) Why superscalar?}
     Why does SMT require a superscalar core? Typical speedup?
      \\ \solution{Solution: }
     Only a superscalar core has \important{multiple issue slots/pipelines} per cycle to give the 2nd thread; a scalar core has nothing spare. Speedup $\sim$\important{30\%} (more about cache stalls than FU availability).
 \end{example2}
 
-\subsection{LZ9 AMP Scenarios}
+\subsection{AMP Scenarios}
 
 \mult{2}
 
@@ -235,13 +235,13 @@
     same ISA $\to$ SMP/big.LITTLE under one OS; \important{different ISA $\to$ separate OS/bare-metal per core + openAMP}. Answer the boot/code/coupling questions first.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ9 (s20) Different ISA under one OS?}
+\begin{example2}{Ex.\ (s20) Different ISA under one OS?}
     Can different-ISA cores run under a single OS? Give two AMP scenarios.
      \\ \solution{Solution: }
     \important{No} one kernel is built for one ISA (big.LITTLE works only because it's the \emph{same} ISA). Scenarios: different ISA (specialised PRU/GPU/DSP); same ISA split by task (comms vs I/O); big.LITTLE; different/no OS.
 \end{example2}
 
-\subsection{LZ10 openAMP}
+\subsection{openAMP}
 
 \mult{2}
 
@@ -261,7 +261,7 @@
     \paragraph{Two IPC methods} shared memory + signalling good for asynchronous cores.
 \end{KR}
 
-\begin{example2}{Ex.\ LZ10 Bring up an R5 on the Zynq}
+\begin{example2}{Ex.\ Bring up an R5 on the Zynq}
     On the Zynq UltraScale+, how does the APU start an R5 and talk to it?
      \\ \solution{Solution: }
     \important{remoteproc}: \texttt{rproc\_boot} decodes the R5's ELF and boots it (the RPU starts halted). Communication via \important{rpmsg over virtio} ring buffers. Zynq = 4$\times$A53 SMP + 2$\times$R5 lockstep + FPGA accelerators.
